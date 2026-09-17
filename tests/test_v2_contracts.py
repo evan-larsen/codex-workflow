@@ -41,7 +41,7 @@ class V2ContractTests(unittest.TestCase):
         cls.package = PackageLayout.resolve(PACKAGE_ROOT)
 
     def test_package_validation_requires_expected_workers_and_v2_metadata(self):
-        self.assertEqual(self.package.version, "2.0.2")
+        self.assertEqual(self.package.version, "2.0.3")
         self.assertEqual(
             self.package.worker_names,
             {"auditor", "default_executor", "investigator", "senior_executor", "tester"},
@@ -255,7 +255,7 @@ Decision: No additional decisions.
                 self.assertTrue(all(name == "codex_workflow" or name.startswith("codex_workflow/") for name in bundle.namelist()))
                 bundle.extractall(Path(directory) / "extracted")
             extracted = PackageLayout.resolve(Path(directory) / "extracted" / "codex_workflow")
-            self.assertEqual(extracted.version, "2.0.2")
+            self.assertEqual(extracted.version, "2.0.3")
             for source in sorted(self.package.agent_templates.glob("*.toml")):
                 archived = (
                     Path(directory)
@@ -289,6 +289,15 @@ Decision: No additional decisions.
             self.assertEqual(
                 project.active.read_text(encoding="utf-8"),
                 "# Existing project rules\n",
+            )
+            self.assertFalse((home / "codex_workflow" / ".git").exists())
+            state = json.loads(
+                (home / "codex_workflow" / "install_state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertFalse(
+                any(path.startswith(".git/") for path in state["owned_runtime_files"])
             )
             self.assertFalse((home / "AGENTS.md").exists())
             for source in sorted(self.package.agent_templates.glob("*.toml")):
@@ -324,7 +333,7 @@ Decision: No additional decisions.
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(package_result.returncode, 0, package_result.stdout + package_result.stderr)
-            archive = package_output / "codex_workflow-2.0.2.zip"
+            archive = package_output / "codex_workflow-2.0.3.zip"
             self.assertTrue(archive.is_file())
             self.assertTrue((package_output / "SHA256SUMS").is_file())
             fake_bin = root / "bin"
@@ -359,9 +368,17 @@ Decision: No additional decisions.
             runtime = RuntimePaths(home)
             plan_bootstrap(self.package, runtime, project).apply()
             before = project.active.read_bytes()
+            stale_git_file = home / "codex_workflow" / ".git" / "stale"
+            stale_git_file.parent.mkdir()
+            stale_git_file.write_text("obsolete\n", encoding="utf-8")
+            state_path = home / "codex_workflow" / "install_state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["owned_runtime_files"].append(".git/stale")
+            state_path.write_text(json.dumps(state) + "\n", encoding="utf-8")
             plan_update(self.package, runtime, project).apply()
             self.assertEqual(project.active.read_bytes(), before)
             self.assertFalse(project.workflow_dir.exists())
+            self.assertFalse(stale_git_file.exists())
 
     def test_bootstrap_installs_owned_global_workflow_skill(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -33,10 +33,14 @@ def plan_runtime_files(
     mutations: list[Mutation] = []
     owned: set[str] = set()
     excluded = {
+        ".git",
+        ".pytest_cache",
         "AGENTS.md",
         "agents",
+        "dist",
         "project_docs",
         "templates",
+        "tmp",
         ".source_backup",
         ".backups",
         USER_STATE,
@@ -45,7 +49,10 @@ def plan_runtime_files(
         relative = source.relative_to(package.root)
         if (
             relative.parts[0] in excluded
-            or "__pycache__" in relative.parts
+            or any(
+                part in {".git", ".pytest_cache", "dist", "tmp", "__pycache__"}
+                for part in relative.parts
+            )
             or source.suffix == ".pyc"
             or not source.is_file()
         ):
@@ -70,15 +77,19 @@ def plan_runtime_files(
     mutations.extend(plan_workflow_skill(package, runtime))
     backup = runtime.runtime / ".source_backup" / package.version
     for source in sorted(package.root.rglob("*")):
+        relative = source.relative_to(package.root)
         if (
             source.is_file()
-            and "__pycache__" not in source.parts
+            and not any(
+                part in {".git", ".pytest_cache", "dist", "tmp", "__pycache__"}
+                for part in relative.parts
+            )
             and source.suffix != ".pyc"
             and ".source_backup" not in source.parts
             and ".backups" not in source.parts
         ):
             mutations.append(
-                Mutation(backup / source.relative_to(package.root), source.read_bytes())
+                Mutation(backup / relative, source.read_bytes())
             )
     return mutations, owned
 
