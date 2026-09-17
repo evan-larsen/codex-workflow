@@ -189,6 +189,10 @@ Decision: No additional decisions.
             fake_bin = root / "bin"
             fake_bin.mkdir()
             (fake_bin / "codex.cmd").write_text("@echo codex 0.147.0\n", encoding="ascii")
+            if os.name != "nt":
+                codex = fake_bin / "codex"
+                codex.write_text("#!/bin/sh\necho codex 0.147.0\n", encoding="ascii")
+                codex.chmod(0o755)
             project = root / "project"
             home = root / "codex-home"
             environment = os.environ.copy()
