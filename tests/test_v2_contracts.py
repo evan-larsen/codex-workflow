@@ -41,7 +41,7 @@ class V2ContractTests(unittest.TestCase):
         cls.package = PackageLayout.resolve(PACKAGE_ROOT)
 
     def test_package_validation_requires_expected_workers_and_v2_metadata(self):
-        self.assertEqual(self.package.version, "2.0.3")
+        self.assertEqual(self.package.version, "2.0.4")
         self.assertEqual(
             self.package.worker_names,
             {"auditor", "default_executor", "investigator", "senior_executor", "tester"},
@@ -255,7 +255,7 @@ Decision: No additional decisions.
                 self.assertTrue(all(name == "codex_workflow" or name.startswith("codex_workflow/") for name in bundle.namelist()))
                 bundle.extractall(Path(directory) / "extracted")
             extracted = PackageLayout.resolve(Path(directory) / "extracted" / "codex_workflow")
-            self.assertEqual(extracted.version, "2.0.3")
+            self.assertEqual(extracted.version, "2.0.4")
             for source in sorted(self.package.agent_templates.glob("*.toml")):
                 archived = (
                     Path(directory)
@@ -333,7 +333,7 @@ Decision: No additional decisions.
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(package_result.returncode, 0, package_result.stdout + package_result.stderr)
-            archive = package_output / "codex_workflow-2.0.3.zip"
+            archive = package_output / "codex_workflow-2.0.4.zip"
             self.assertTrue(archive.is_file())
             self.assertTrue((package_output / "SHA256SUMS").is_file())
             fake_bin = root / "bin"
@@ -379,6 +379,7 @@ Decision: No additional decisions.
             self.assertEqual(project.active.read_bytes(), before)
             self.assertFalse(project.workflow_dir.exists())
             self.assertFalse(stale_git_file.exists())
+            self.assertFalse(stale_git_file.parent.exists())
 
     def test_bootstrap_installs_owned_global_workflow_skill(self):
         with tempfile.TemporaryDirectory() as directory:

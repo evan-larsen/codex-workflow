@@ -98,10 +98,16 @@ def plan_update(
     incoming_targets = {
         mutation.path.resolve(strict=False) for mutation in runtime_mutations
     }
+    obsolete_runtime_dirs = []
     for relative in read_string_list(previous_state, "owned_runtime_files"):
         obsolete = resolve_owned_runtime_path(runtime.runtime, relative)
         if obsolete not in incoming_targets and obsolete.exists():
             mutations.append(Mutation(obsolete, None))
+            parent = obsolete.parent
+            runtime_root = runtime.runtime.resolve()
+            while parent != runtime_root:
+                obsolete_runtime_dirs.append(parent)
+                parent = parent.parent
     # The legacy configuration was workflow-owned, even for installations
     # whose older ownership manifest predates its entry.  Retire it after the
     # preference has been migrated so it cannot become a second source of
@@ -130,5 +136,5 @@ def plan_update(
             "to_version": incoming.version,
             "backup": str(backup_root),
         },
-        cleanup_dirs=obsolete_skill_dirs,
+        cleanup_dirs=obsolete_skill_dirs + obsolete_runtime_dirs,
     )
