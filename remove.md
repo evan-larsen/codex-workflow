@@ -1,8 +1,8 @@
 # Remove codex_workflow
 
-Run this procedure only for the exact command:
+Run this procedure only for the explicit skill invocation:
 
-    codex_workflow --remove
+    $codex-workflow remove
 
 This is a destructive operation. It uses two phases: the first phase is a
 read-only plan, and the second phase is allowed only after one clear second
@@ -20,20 +20,20 @@ plan and explicitly warn that the confirmed phase will permanently delete:
 
 - the workflow wrapper around the recognized project-level `AGENTS.md` (active
   or disabled), project personalization, and project workflow state;
-- the workflow-managed region in the user-level `~/.codex/AGENTS.md` (the
-  user file itself is deleted only when no unrelated content remains);
+- any legacy workflow-managed region in the user-level `~/.codex/AGENTS.md`
+  (the user file itself is deleted only when no unrelated content remains);
 - workflow-owned keys in `~/.codex/config.toml`;
 - worker TOMLs carrying a matching `codex-workflow-worker` ownership marker;
 - every file under `~/.codex/codex_workflow/`, including source and update
   backups.
-- the workflow-owned global maintainer skill at
-  `~/.codex/skills/codex-workflow-maintainer/SKILL.md`.
+- the workflow-owned global skill at `~/.codex/skills/codex-workflow/` and any
+  owned legacy `codex-workflow-maintainer` skill.
 
 Also report that project-local instructions imported into the workflow entry
 point are restored to the root `AGENTS.md`, and that workflow-owned marked
 `.gitignore` rules are removed. `agent_docs/`, unrelated user-level
-AGENTS/config content, unrelated worker TOMLs, and an unowned skill at the
-maintainer-skill path are preserved. Do not claim
+AGENTS/config content, unrelated worker TOMLs, and unowned global skills are
+preserved. Do not claim
 that anything has been removed during this first phase.
 
 Then ask exactly one confirmation, for example:

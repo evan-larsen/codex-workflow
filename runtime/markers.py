@@ -17,9 +17,6 @@ USER_MANAGED = Marker(
     "<!-- codex-workflow-user-managed-start -->",
     "<!-- codex-workflow-user-managed-end -->",
 )
-AUTO_CHECK_UPDATE_PLACEHOLDER = (
-    "<!-- codex-workflow-auto-check-update-instruction -->"
-)
 WORKFLOW_MANAGED = Marker(
     "<!-- codex-workflow-managed-start -->",
     "<!-- codex-workflow-managed-end -->",

@@ -211,12 +211,12 @@ def plan_project_install(package: PackageLayout, project: ProjectPaths) -> Opera
             if current_personalization != direct_personalization:
                 raise ValidationError(
                     "project personalization resource and generated entry point disagree; "
-                    "run codex_workflow --personal or codex_workflow --update"
+                    "invoke $codex-workflow personalize or $codex-workflow update"
                 )
             if extract(current, WORKFLOW_MANAGED) != extract(template, WORKFLOW_MANAGED):
                 raise ValidationError(
                     "recognized project entry point uses an older or modified workflow template; "
-                    "run codex_workflow --update"
+                    "invoke $codex-workflow update"
                 )
         else:
             if disabled_exists:

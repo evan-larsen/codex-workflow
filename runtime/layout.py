@@ -9,23 +9,16 @@ from pathlib import Path
 from ._toml import tomllib
 from .errors import ValidationError
 from .markers import (
-    AUTO_CHECK_UPDATE_PLACEHOLDER,
-    USER_MANAGED,
-    extract,
     validate_project_template,
 )
 from .personalization import materialize_personalization
 
 
 PROJECT_ID = "<!-- codex-workflow-id: codex_workflow -->"
-USER_ID = "<!-- codex-workflow-user-id: codex_workflow -->"
 # v1 installations used the original repository-qualified marker. Keep it
 # recognizable for one explicit update migration, but never emit it again.
 LEGACY_PROJECT_IDS = frozenset(
     {"<!-- codex-workflow-id: viettran-edgeAI/codex_workflow -->"}
-)
-LEGACY_USER_IDS = frozenset(
-    {"<!-- codex-workflow-user-id: viettran-edgeAI/codex_workflow -->"}
 )
 
 
@@ -35,26 +28,23 @@ def is_project_owned(text: str) -> bool:
     return PROJECT_ID in text or any(marker in text for marker in LEGACY_PROJECT_IDS)
 
 
-def is_user_owned(text: str, *, allow_legacy: bool = False) -> bool:
-    """Return whether a user entry belongs to this workflow installation."""
-
-    return USER_ID in text or (
-        allow_legacy and any(marker in text for marker in LEGACY_USER_IDS)
-    )
 WORKER_MARKER = re.compile(r"^# codex-workflow-worker: ([A-Za-z0-9_-]+)$", re.MULTILINE)
 PROJECT_STATE = "state.json"
 USER_STATE = "install_state.json"
-MAINTAINER_SKILL = "codex-workflow-maintainer"
-MAINTAINER_SKILL_OWNER = "<!-- codex-workflow-maintainer-owner: codex_workflow -->"
+WORKFLOW_SKILL = "codex-workflow"
+WORKFLOW_SKILL_OWNER = "<!-- codex-workflow-skill-owner: codex_workflow -->"
+LEGACY_SKILL_MARKERS = {
+    "codex-workflow-maintainer": (
+        "<!-- codex-workflow-maintainer-owner: codex_workflow -->"
+    ),
+}
+OWNED_SKILL_MARKERS = {WORKFLOW_SKILL: WORKFLOW_SKILL_OWNER, **LEGACY_SKILL_MARKERS}
 BUILTIN_WORKERS = frozenset(
     {
         "default_executor",
         "senior_executor",
         "tester",
-        "doc-writer",
-        "companion",
         "investigator",
-        "closure_steward",
         "auditor",
     }
 )
@@ -106,44 +96,33 @@ class PackageLayout:
             version,
         ):
             raise ValidationError(f"invalid package VERSION: {version!r}")
-        user_agents = self.root / "user_AGENTS.md"
-        if not user_agents.is_file():
-            raise ValidationError("package user_AGENTS.md marker is missing")
-        user_agents_text = user_agents.read_text(encoding="utf-8")
-        if not is_user_owned(user_agents_text, allow_legacy=allow_legacy):
-            raise ValidationError("package user_AGENTS.md marker is missing")
-        if f"<!-- codex-workflow-version: {version} -->" not in user_agents_text:
-            raise ValidationError("package version and user marker disagree")
-        managed_user_agents = extract(user_agents_text, USER_MANAGED)
         if not allow_legacy:
-            skill = self.root / "skills" / MAINTAINER_SKILL / "SKILL.md"
+            skill_dir = self.root / "skills" / WORKFLOW_SKILL
+            skill = skill_dir / "SKILL.md"
             if not skill.is_file():
-                raise ValidationError("package maintainer skill is missing")
-            if MAINTAINER_SKILL_OWNER not in skill.read_text(encoding="utf-8"):
-                raise ValidationError("package maintainer skill ownership marker is missing")
-            if managed_user_agents.count(AUTO_CHECK_UPDATE_PLACEHOLDER) != 1:
-                raise ValidationError(
-                    "package user_AGENTS.md auto-check placeholder is missing or duplicated"
-                )
+                raise ValidationError("package workflow skill is missing")
+            if WORKFLOW_SKILL_OWNER not in skill.read_text(encoding="utf-8"):
+                raise ValidationError("package workflow skill ownership marker is missing")
+            if not (skill_dir / "agents" / "openai.yaml").is_file():
+                raise ValidationError("package workflow skill metadata is missing")
+            required_skill_references = {
+                "coordination.md",
+                "maintenance.md",
+                "verification.md",
+            }
+            present_skill_references = {
+                path.name
+                for path in (skill_dir / "references").glob("*.md")
+                if path.is_file()
+            }
+            if not required_skill_references.issubset(present_skill_references):
+                raise ValidationError("package workflow skill references are incomplete")
             required = [
                 "workflow.py",
-                "heavy_route.md",
-                "medium_route.md",
-                "companion.md",
-                "investigation_team.md",
-                "closure_steward.md",
-                "install.md",
                 "bootstrap.md",
                 "update.md",
                 "check_update.md",
                 "remove.md",
-                "enable_auto_check_update.md",
-                "enable_auto_update.md",
-                "disable_auto_update.md",
-                "disable_auto_check_update.md",
-                "personalization_guide.md",
-                "enable.md",
-                "disable.md",
                 "runtime/__init__.py",
                 "runtime/_toml.py",
                 "runtime/backup.py",
@@ -157,19 +136,11 @@ class PackageLayout:
                 "runtime/release.py",
                 "runtime/runtime_ops.py",
                 "runtime/transaction.py",
-                "resources/auto_check_update.md",
                 "resources/personalization.md",
             ]
             missing = [relative for relative in required if not (self.root / relative).is_file()]
             if missing:
                 raise ValidationError(f"package runtime files missing: {missing}")
-            auto_check_instruction = (
-                self.root / "resources" / "auto_check_update.md"
-            ).read_text(encoding="utf-8")
-            if "auto-check-update --json" not in auto_check_instruction:
-                raise ValidationError(
-                    "package automatic-check instruction is missing its command"
-                )
             validate_project_template(self.project_template.read_text(encoding="utf-8"))
         required_docs = {
             "project_overview.md",

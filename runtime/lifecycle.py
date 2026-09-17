@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from pathlib import Path
-
 from . import RUNTIME_SCHEMA_VERSION
 from .backup import append_backup_mutations
-from .errors import ValidationError
-from .layout import MAINTAINER_SKILL, USER_STATE, PackageLayout, ProjectPaths, RuntimePaths
-from .personalization import materialize_personalization
+from .layout import WORKFLOW_SKILL, USER_STATE, PackageLayout, ProjectPaths, RuntimePaths
 from .plan import (
     OperationPlan,
     deduplicate,
@@ -18,16 +14,9 @@ from .plan import (
     read_string_list,
     resolve_owned_runtime_path,
 )
-from .project_ops import (
-    plan_enable,
-    plan_personalize,
-    plan_project_install,
-    plan_project_remove,
-    plan_project_update,
-)
-from .release import parse_semver
+from .project_ops import plan_project_remove
 from .runtime_ops import (
-    plan_installed_user_agents,
+    plan_obsolete_owned_skills,
     plan_runtime_files,
     plan_runtime_remove,
 )
@@ -37,44 +26,21 @@ from .transaction import Mutation
 def plan_bootstrap(
     package: PackageLayout, runtime: RuntimePaths, project: ProjectPaths
 ) -> OperationPlan:
-    mutations, owned_runtime = plan_runtime_files(package, runtime, False)
-    project_plan = plan_project_install(package, project)
-    mutations.extend(project_plan.mutations)
+    mutations, owned_runtime = plan_runtime_files(package, runtime)
     state = {
         "schema_version": RUNTIME_SCHEMA_VERSION,
         "version": package.version,
         "owned_runtime_files": sorted(owned_runtime),
         "owned_workers": sorted(package.worker_names),
-        "owned_skills": [MAINTAINER_SKILL],
-        "auto_check_update": False,
+        "owned_skills": [WORKFLOW_SKILL],
     }
     mutations.append(json_mutation(runtime.runtime / USER_STATE, state))
     return OperationPlan(
         "bootstrap",
         deduplicate(mutations),
-        project_plan.warnings,
-        project_plan.agent_actions,
+        [],
+        [],
         {"version": package.version},
-        cleanup_dirs=project_plan.cleanup_dirs,
-    )
-
-
-def plan_auto_check_update_setting(
-    runtime: RuntimePaths, *, enabled: bool
-) -> OperationPlan:
-    state_path = runtime.runtime / USER_STATE
-    if not state_path.is_file():
-        raise ValidationError("workflow installation state is missing")
-    state = read_json(state_path, default={})
-    state["auto_check_update"] = enabled
-    mutations = [json_mutation(state_path, state)]
-    mutations.extend(plan_installed_user_agents(runtime, enabled=enabled))
-    return OperationPlan(
-        "set-auto-check-update",
-        mutations,
-        [],
-        [],
-        {"auto_check_update": enabled},
     )
 
 
@@ -106,17 +72,12 @@ def plan_remove(
 def plan_update(
     incoming: PackageLayout,
     runtime: RuntimePaths,
-    project: ProjectPaths,
+    project: ProjectPaths | None = None,
     *,
     legacy_local_instructions: str | None = None,
 ) -> OperationPlan:
     installed = PackageLayout.resolve(runtime.runtime, allow_legacy=True)
-    project_installed = _project_installed_package(installed, runtime, project)
     previous_state = read_json(runtime.runtime / USER_STATE, default={})
-    auto_check_update = _auto_check_update(
-        previous_state,
-        legacy_config=runtime.runtime / "workflow_config.json",
-    )
     backup_root = (
         runtime.runtime
         / ".backups"
@@ -124,17 +85,16 @@ def plan_update(
     )
     mutations: list[Mutation] = []
     append_backup_mutations(mutations, backup_root, runtime, project)
-    runtime_mutations, owned_runtime = plan_runtime_files(
-        incoming, runtime, auto_check_update
-    )
+    runtime_mutations, owned_runtime = plan_runtime_files(incoming, runtime)
     mutations.extend(runtime_mutations)
-    project_mutations, warnings = plan_project_update(
-        project_installed,
-        incoming,
-        project,
-        legacy_local_instructions=legacy_local_instructions,
+    obsolete_skill_mutations, obsolete_skill_dirs, skill_warnings = (
+        plan_obsolete_owned_skills(
+            runtime, set(read_string_list(previous_state, "owned_skills"))
+        )
     )
-    mutations.extend(project_mutations)
+    mutations.extend(obsolete_skill_mutations)
+    warnings: list[str] = []
+    warnings.extend(skill_warnings)
     incoming_targets = {
         mutation.path.resolve(strict=False) for mutation in runtime_mutations
     }
@@ -157,8 +117,7 @@ def plan_update(
         "version": incoming.version,
         "owned_runtime_files": sorted(owned_runtime),
         "owned_workers": sorted(incoming.worker_names),
-        "owned_skills": [MAINTAINER_SKILL],
-        "auto_check_update": auto_check_update,
+        "owned_skills": [WORKFLOW_SKILL],
     }
     mutations.append(json_mutation(runtime.runtime / USER_STATE, state))
     return OperationPlan(
@@ -169,69 +128,7 @@ def plan_update(
         {
             "from_version": installed.version,
             "to_version": incoming.version,
-            "project_from_version": project_installed.version,
             "backup": str(backup_root),
         },
+        cleanup_dirs=obsolete_skill_dirs,
     )
-
-
-def _auto_check_update(
-    state: dict[str, object], *, legacy_config: Path | None = None
-) -> bool:
-    """Resolve the update-check preference across the state-file migration.
-
-    Releases that predate the fixed-settings runtime stored this preference in
-    ``workflow_config.json``.  A missing state field therefore means "read the
-    legacy source", not "disable the preference".  Once the new state field is
-    present it remains authoritative, including an explicit ``false`` value.
-    """
-
-    if "auto_check_update" in state:
-        value = state["auto_check_update"]
-    elif legacy_config is not None and legacy_config.is_file():
-        legacy_state = read_json(legacy_config, default={})
-        value = legacy_state.get("auto_check_update", False)
-    else:
-        value = False
-    if not isinstance(value, bool):
-        raise ValidationError("install state auto_check_update must be boolean")
-    return value
-
-
-def _project_installed_package(
-    installed: PackageLayout,
-    runtime: RuntimePaths,
-    project: ProjectPaths,
-) -> PackageLayout:
-    """Resolve the package version that produced this project's entry point."""
-
-    if not project.active.exists() and not project.disabled.exists():
-        return installed
-    state = read_json(project.state, default={})
-    version = state.get("workflow_version")
-    if version is None:
-        # Pre-state installations can only be compared with the currently
-        # installed source, retaining the legacy migration behavior.
-        return installed
-    if not isinstance(version, str) or not version:
-        raise ValidationError("project workflow_version state must be a non-empty string")
-    parse_semver(version)
-    if version == installed.version:
-        return installed
-    source_backups = (runtime.runtime / ".source_backup").resolve()
-    historical_root = (source_backups / version).resolve()
-    try:
-        historical_root.relative_to(source_backups)
-    except ValueError as error:
-        raise ValidationError("project workflow_version resolves outside source backups") from error
-    if not historical_root.is_dir():
-        raise ValidationError(
-            "the historical workflow source for this project is missing: "
-            f"{historical_root}; restore it from backup before updating the project"
-        )
-    historical = PackageLayout.resolve(historical_root, allow_legacy=True)
-    if historical.version != version:
-        raise ValidationError(
-            "project workflow state and historical source backup versions disagree"
-        )
-    return historical

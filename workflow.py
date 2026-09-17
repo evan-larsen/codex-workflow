@@ -21,17 +21,12 @@ if sys.version_info < (3, 11):
     raise SystemExit("codex_workflow requires Python 3.11 or newer")
 
 from runtime.errors import WorkflowError
-from runtime.layout import PROJECT_ID, USER_STATE
 from runtime.lifecycle import (
     OperationPlan,
     PackageLayout,
     ProjectPaths,
     RuntimePaths,
     plan_bootstrap,
-    plan_auto_check_update_setting,
-    plan_enable,
-    plan_personalize,
-    plan_project_install,
     plan_remove,
     plan_update,
 )
@@ -70,12 +65,6 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
 
-    install = commands.add_parser("install")
-    _add_common(install)
-    # Retained for callers that have an extracted package available. This is
-    # a read-only project-install source; install never bootstraps user files.
-    install.add_argument("--package-root", type=Path, help=argparse.SUPPRESS)
-
     bootstrap = commands.add_parser("bootstrap", help=argparse.SUPPRESS)
     _add_common(bootstrap)
     bootstrap.add_argument(
@@ -83,6 +72,8 @@ def parse_args() -> argparse.Namespace:
     )
 
     update = commands.add_parser("update")
+    # Keep --project for compatibility with older launchers; updates no longer
+    # modify project files.
     _add_common(update)
     # Internal hand-off from an installed launcher; not a public prompt form.
     update.add_argument("--source", type=Path, help=argparse.SUPPRESS)
@@ -97,30 +88,8 @@ def parse_args() -> argparse.Namespace:
     _add_common(remove)
     remove.add_argument("--confirm", action="store_true", help=argparse.SUPPRESS)
 
-    auto_check = commands.add_parser("auto-check-update")
-    _add_common(auto_check, project=False)
-
     check_update = commands.add_parser("check-update")
     _add_common(check_update, project=False)
-
-    for name in (
-        "enable-auto-check-update",
-        "disable-auto-check-update",
-        # Compatibility aliases retained from releases that called a
-        # notification-only check an automatic update.
-        "enable-auto-update",
-        "disable-auto-update",
-    ):
-        command = commands.add_parser(name)
-        _add_common(command, project=False)
-
-    personalize = commands.add_parser("personalize")
-    _add_common(personalize)
-    personalize.add_argument("--resource", type=Path, required=True)
-
-    for name in ("enable", "disable"):
-        command = commands.add_parser(name)
-        _add_common(command)
 
     validate = commands.add_parser("validate")
     _add_common(validate, project=False)
@@ -192,15 +161,6 @@ def _finish(plan: OperationPlan, args: argparse.Namespace) -> int:
     plan.apply()
     _emit(summary, compact=args.json)
     return 0
-
-
-def _project_workflow_entry(project: ProjectPaths) -> Path | None:
-    """Return an existing recognized active or disabled project entry point."""
-
-    for path in (project.active, project.disabled):
-        if path.is_file() and PROJECT_ID in path.read_text(encoding="utf-8"):
-            return path
-    return None
 
 
 def _package_root(path: Path) -> Path:
@@ -298,39 +258,6 @@ def main() -> int:
                 compact=args.json,
             )
             return 0
-        if args.command == "auto-check-update":
-            state_path = runtime.runtime / USER_STATE
-            try:
-                state = json.loads(state_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError) as error:
-                raise WorkflowError(f"cannot read workflow installation state: {error}") from error
-            if not isinstance(state, dict):
-                raise WorkflowError("workflow installation state must be a JSON object")
-            auto_check_update = state.get("auto_check_update", False)
-            if not isinstance(auto_check_update, bool):
-                raise WorkflowError("install state auto_check_update must be boolean")
-            if not auto_check_update:
-                _emit(
-                    {"status": "disabled", "installed": None, "available": None},
-                    compact=args.json,
-                )
-                return 0
-            installed_text = (runtime.runtime / "VERSION").read_text(encoding="utf-8").strip()
-            installed = parse_semver(installed_text)
-            selected = select_latest()
-            status = "current" if selected.version == installed else (
-                "update available" if selected.version > installed else "installed newer"
-            )
-            _emit(
-                {
-                    "status": status,
-                    "installed": installed_text,
-                    "available": selected.version_text,
-                    "asset": selected.zip_name,
-                },
-                compact=args.json,
-            )
-            return 0
         if args.command == "check-update":
             installed_text = (runtime.runtime / "VERSION").read_text(encoding="utf-8").strip()
             installed = parse_semver(installed_text)
@@ -380,63 +307,11 @@ def main() -> int:
                 _emit(summary, compact=args.json)
                 return 0
             return _finish(plan, args)
-        if args.command in {
-            "enable-auto-check-update",
-            "disable-auto-check-update",
-            "enable-auto-update",
-            "disable-auto-update",
-        }:
-            return _finish(
-                plan_auto_check_update_setting(
-                    runtime,
-                    enabled=args.command in {
-                        "enable-auto-check-update",
-                        "enable-auto-update",
-                    },
-                ),
-                args,
-            )
         if args.command == "bootstrap":
             assert project is not None
             package = PackageLayout.resolve(args.package_root)
             return _finish(plan_bootstrap(package, runtime, project), args)
-        if args.command == "install":
-            assert project is not None
-            if project.active.exists() and project.disabled.exists():
-                raise WorkflowError("both active and disabled project entry points exist")
-            if (runtime.runtime / "VERSION").is_file():
-                package = PackageLayout.resolve(runtime.runtime)
-            elif args.package_root is not None:
-                package = PackageLayout.resolve(args.package_root)
-            else:
-                raise WorkflowError(
-                    "the user-level workflow bootstrap is not installed; "
-                    "complete the initial bootstrap before installing a project"
-                )
-            existing = _project_workflow_entry(project)
-            if existing is not None:
-                # Validate the recognized entry before reporting a no-op. This
-                # turns stale, malformed, or personalization-drifted installs
-                # into actionable errors instead of misreporting them as merely
-                # disabled.
-                plan_project_install(package, project)
-                enabled = existing == project.active
-                _emit(
-                    {
-                        "applied": False,
-                        "status": "already enabled" if enabled else "already disabled",
-                        "instruction": (
-                            "No action is required."
-                            if enabled
-                            else "Run `codex_workflow --enable` to reactivate it."
-                        ),
-                    },
-                    compact=args.json,
-                )
-                return 0
-            return _finish(plan_project_install(package, project), args)
         if args.command == "update":
-            assert project is not None
             if args.source:
                 incoming_root = _package_root(args.source)
             else:
@@ -466,13 +341,6 @@ def main() -> int:
                 ),
                 args,
             )
-        if args.command == "personalize":
-            assert project is not None
-            resource = args.resource.read_text(encoding="utf-8")
-            return _finish(plan_personalize(project, resource), args)
-        if args.command in {"enable", "disable"}:
-            assert project is not None
-            return _finish(plan_enable(project, enable=args.command == "enable"), args)
         raise WorkflowError(f"unsupported command: {args.command}")
     except (OSError, WorkflowError) as error:
         _emit({"error": str(error), "applied": False}, compact=getattr(args, "json", False))

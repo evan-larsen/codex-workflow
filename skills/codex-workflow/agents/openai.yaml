@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Workflow"
+  short_description: "Fast adaptive coding coordination"
+  default_prompt: "Use $codex-workflow to complete this task with the smallest effective coordination and verification."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,8 +1,8 @@
 # Workflow Update
 
-Supported command forms:
+Supported skill invocation:
 
-    codex_workflow --update
+    $codex-workflow update
 
 Codex 0.147.0 or newer and Python 3.11 or newer are required. Before downloading
 or mutating anything, run:
@@ -33,31 +33,21 @@ python3 ~/.codex/codex_workflow/workflow.py update --project <project>
 For migration from a pre-script installation, run the incoming package's
 `workflow.py` instead of an older installed launcher.
 
-The script replaces installed routes and worker TOMLs with the incoming
-release's fixed definitions. It preserves unrelated Codex settings,
-project documents, personalization, project-local instructions, source backups,
-the independent automatic-check preference, and the project's enabled/disabled
-state. For projects that still use an older workflow version, it validates their
-managed region against that version's source backup instead of the latest global
-template. It removes obsolete workflow-owned files, creates a verified
-timestamped backup, and applies user/project state as one compensating
-transaction.
-
-If a legacy project entry point contains merged local edits, the update stops.
-Review and extract only the project-local instructions into a temporary file,
-then rerun with:
-
-```text
---legacy-local-instructions <reviewed-file>
-```
-
-This is a one-time migration into the dedicated local region. Never infer the
-content automatically. A downgrade additionally requires `--allow-downgrade`.
+The script replaces the installed workflow skill and worker TOMLs with the
+incoming release's fixed definitions. It preserves unrelated Codex settings,
+source backups, and every project file. The retained `--project` and
+`--legacy-local-instructions` arguments are compatibility inputs only; update
+does not create, wrap, rewrite, enable, disable, or personalize project
+`AGENTS.md`. It removes obsolete workflow-owned runtime files, creates a
+verified timestamped runtime backup, and applies user-level state as one
+compensating transaction. A downgrade additionally requires
+`--allow-downgrade`.
 
 Report the installed version, preserved preferences, backup location, and any failure.
 Do not describe a partial or rolled-back update as successful.
 
-An update also replaces the workflow-owned global maintainer skill at
-`~/.codex/skills/codex-workflow-maintainer/SKILL.md`. An unmarked skill at that
-path is treated as unrelated and blocks the update. Refresh or restart Codex
-after the update so the new skill is discovered.
+An update replaces the workflow-owned global skill at
+`~/.codex/skills/codex-workflow/`. An unmarked skill at that path is unrelated
+and blocks the update. An owned legacy `codex-workflow-maintainer` skill is
+removed during migration; an unmarked legacy directory is preserved. Refresh
+or restart Codex after the update so the new skill is discovered.

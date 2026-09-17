@@ -1,14 +1,13 @@
 # codex_workflow
 
 Portable, deterministic lifecycle tooling for installing a generic Codex
-workflow into a user runtime and project. The CLI slug is `codex_workflow` and
-the canonical package version is `2.0.1`.
+workflow into a user runtime. The CLI slug is `codex_workflow` and
+the canonical package version is `2.0.2`.
 
-The package owns only its marked user/project regions, marked worker files, and
-workflow settings. Existing unowned role files are never overwritten. The
-three-section personalization resource remains compatible with v1 projects;
-customized sections are materialized into the project entry point without
-creating selectable profiles.
+The package owns only its runtime directory, marked worker files, global skill,
+and workflow settings. Existing unowned role files and project files are never
+overwritten. Legacy project-wrapper support remains only so removal can restore
+previously captured project instructions safely.
 
 This public repository is maintained at
 [`evan-larsen/codex-workflow`](https://github.com/evan-larsen/codex-workflow).
@@ -35,7 +34,7 @@ Run the following from the project you want to configure, changing `$Version`
 if you are installing another published release:
 
 ```powershell
-$Version = '2.0.1'
+$Version = '2.0.2'
 $BaseUrl = "https://github.com/evan-larsen/codex-workflow/releases/download/v$Version"
 $Download = Join-Path $env:TEMP "codex-workflow-$Version"
 New-Item -ItemType Directory -Force -Path $Download | Out-Null
@@ -62,25 +61,43 @@ $Bootstrap = Join-Path $Download 'review/codex_workflow/scripts/bootstrap.ps1'
 ```
 
 The bootstrap script repeats checksum and package validation immediately before
-installation. It writes workflow-owned files under the selected Codex home
-and project; keep the downloaded files until installation has completed
-successfully.
+installation. It writes workflow-owned files only under the selected Codex
+home; the bootstrap's project argument is retained for command compatibility
+but does not modify the project. Keep the downloaded files until installation
+has completed successfully.
 
-After the initial bootstrap, use the lifecycle forms documented in
-[`install.md`](install.md), [`update.md`](update.md),
+After the initial bootstrap, invoke the global skill for lifecycle operations
+documented in
+[`update.md`](update.md),
 [`check_update.md`](check_update.md), and [`remove.md`](remove.md):
 
 ```text
-codex_workflow --install
-codex_workflow --check-update
-codex_workflow --update
-codex_workflow --remove
+$codex-workflow check for updates
+$codex-workflow update
+$codex-workflow remove
 ```
 
-`--remove` is destructive and requires its separate confirmation phase. Read
-[`remove.md`](remove.md) before using it. To turn the notification-only update
-check on or off, see [`enable_auto_check_update.md`](enable_auto_check_update.md)
-and [`disable_auto_check_update.md`](disable_auto_check_update.md).
+Removal is destructive and requires its separate confirmation phase. Read
+[`remove.md`](remove.md) before using it.
+
+## One explicit adaptive workflow
+
+Normal chats keep normal single-agent behavior. Invoke `$codex-workflow` when
+you want coordinated execution; there are no Light, Medium, or Heavy modes to
+choose between. The coordinator selects the smallest useful shape for the
+outcome: direct work for known micro-seams, one Luna High Fast executor for a
+bounded implementation, parallel executors for disjoint ownership, or one Luna
+xhigh senior executor for a genuinely hard reasoning slice.
+
+The workflow optimizes the critical path. It reuses workers for related
+follow-ups, skips investigators unless uncertainty blocks implementation,
+groups tester findings into one repair packet, waits on lifecycle events rather
+than polling, and runs proportionate verification once the coherent change is
+stable. It does not create a companion or closure worker.
+
+The packaged skill and worker templates are canonical release artifacts.
+Lifecycle tests verify that archives and installed runtimes preserve them and
+that owned legacy workflow components are removed safely during an update.
 
 ## Build and bootstrap
 

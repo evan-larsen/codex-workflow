@@ -12,7 +12,7 @@ def append_backup_mutations(
     mutations: list[Mutation],
     backup_root: Path,
     runtime: RuntimePaths,
-    project: ProjectPaths,
+    project: ProjectPaths | None,
 ) -> None:
     targets = [
         path
@@ -29,16 +29,17 @@ def append_backup_mutations(
         )
     if runtime.agents.is_dir():
         targets.extend(path for path in runtime.agents.glob("*.toml") if path.is_file())
-    targets.extend(
-        path
-        for path in (
-            project.active,
-            project.disabled,
-            project.personalization,
-            project.state,
+    if project is not None:
+        targets.extend(
+            path
+            for path in (
+                project.active,
+                project.disabled,
+                project.personalization,
+                project.state,
+            )
+            if path.is_file()
         )
-        if path.is_file()
-    )
     seen: set[Path] = set()
     for source in targets:
         resolved = source.resolve()
@@ -47,8 +48,10 @@ def append_backup_mutations(
         seen.add(resolved)
         if is_relative_to(source, runtime.codex_home):
             relative = Path("user") / source.relative_to(runtime.codex_home)
-        else:
+        elif project is not None:
             relative = Path("project") / source.relative_to(project.root)
+        else:
+            continue
         mutations.append(Mutation(backup_root / relative, source.read_bytes()))
 
 

@@ -10,22 +10,17 @@ from .platform_settings import (
 )
 from .errors import ValidationError
 from .layout import (
-    LEGACY_USER_IDS,
-    MAINTAINER_SKILL,
-    MAINTAINER_SKILL_OWNER,
-    USER_ID,
+    OWNED_SKILL_MARKERS,
     USER_STATE,
+    WORKFLOW_SKILL,
+    WORKFLOW_SKILL_OWNER,
     WORKER_MARKER,
     PackageLayout,
     RuntimePaths,
 )
 from .markers import (
-    AUTO_CHECK_UPDATE_PLACEHOLDER,
     USER_MANAGED,
-    append_region,
-    extract,
     remove_region,
-    replace,
 )
 from .plan import read_json, read_string_list, text_mutation
 from .transaction import Mutation
@@ -34,7 +29,6 @@ from .transaction import Mutation
 def plan_runtime_files(
     package: PackageLayout,
     runtime: RuntimePaths,
-    auto_check_update: bool,
 ) -> tuple[list[Mutation], set[str]]:
     mutations: list[Mutation] = []
     owned: set[str] = set()
@@ -71,9 +65,9 @@ def plan_runtime_files(
     for source, target in template_targets:
         mutations.append(Mutation(target, source.read_bytes()))
         owned.add(target.relative_to(runtime.runtime).as_posix())
-    mutations.extend(plan_user_agents(package, runtime, enabled=auto_check_update))
+    mutations.extend(plan_legacy_user_agents_cleanup(runtime))
     mutations.extend(plan_platform_and_workers(runtime, package=package))
-    mutations.extend(plan_maintainer_skill(package, runtime))
+    mutations.extend(plan_workflow_skill(package, runtime))
     backup = runtime.runtime / ".source_backup" / package.version
     for source in sorted(package.root.rglob("*")):
         if (
@@ -89,16 +83,16 @@ def plan_runtime_files(
     return mutations, owned
 
 
-def plan_maintainer_skill(package: PackageLayout, runtime: RuntimePaths) -> list[Mutation]:
-    """Install the workflow-owned maintainer skill in Codex's global skill root.
+def plan_workflow_skill(package: PackageLayout, runtime: RuntimePaths) -> list[Mutation]:
+    """Install the workflow-owned coordination skill in Codex's global skill root.
 
     An existing unmarked directory is unrelated user content and is never
     overwritten. A matching ownership marker is the only proof accepted for
     replacement during an update.
     """
 
-    source_dir = package.root / "skills" / MAINTAINER_SKILL
-    target_dir = runtime.skills / MAINTAINER_SKILL
+    source_dir = package.root / "skills" / WORKFLOW_SKILL
+    target_dir = runtime.skills / WORKFLOW_SKILL
     if runtime.skills.is_symlink() or (
         runtime.skills.exists() and not runtime.skills.is_dir()
     ):
@@ -107,11 +101,11 @@ def plan_maintainer_skill(package: PackageLayout, runtime: RuntimePaths) -> list
         target_dir.exists() and not target_dir.is_dir()
     ):
         raise ValidationError(
-            f"refusing to replace non-directory maintainer skill: {target_dir}"
+            f"refusing to replace non-directory workflow skill: {target_dir}"
         )
     if target_dir.is_dir():
         marker = target_dir / "SKILL.md"
-        if not marker.is_file() or MAINTAINER_SKILL_OWNER not in marker.read_text(
+        if not marker.is_file() or WORKFLOW_SKILL_OWNER not in marker.read_text(
             encoding="utf-8"
         ):
             raise ValidationError(
@@ -119,75 +113,82 @@ def plan_maintainer_skill(package: PackageLayout, runtime: RuntimePaths) -> list
             )
 
     mutations: list[Mutation] = []
+    source_files: set[Path] = set()
     for source in sorted(source_dir.rglob("*")):
         if source.is_symlink() or not source.is_file():
             continue
         relative = source.relative_to(source_dir)
+        source_files.add(relative)
         mutations.append(
             Mutation(target_dir / relative, source.read_bytes())
         )
     if not mutations:
-        raise ValidationError("package maintainer skill has no files")
+        raise ValidationError("package workflow skill has no files")
+    if target_dir.is_dir():
+        for target in sorted(target_dir.rglob("*")):
+            if target.is_symlink():
+                raise ValidationError(
+                    f"refusing to replace symlink in global skill: {target}"
+                )
+            if target.is_file() and target.relative_to(target_dir) not in source_files:
+                mutations.append(Mutation(target, None))
     return mutations
 
 
-def _render_user_managed(source: str, instruction: str, *, enabled: bool) -> str:
-    managed = extract(source, USER_MANAGED)
-    if managed.count(AUTO_CHECK_UPDATE_PLACEHOLDER) != 1:
-        raise ValidationError(
-            "user_AGENTS.md auto-check placeholder is missing or duplicated"
+def plan_obsolete_owned_skills(
+    runtime: RuntimePaths, previous_owned: set[str]
+) -> tuple[list[Mutation], list[Path], list[str]]:
+    """Remove obsolete workflow skills only when their ownership is proven."""
+
+    mutations: list[Mutation] = []
+    cleanup_dirs: list[Path] = []
+    warnings: list[str] = []
+    candidates = (previous_owned | set(OWNED_SKILL_MARKERS)) - {WORKFLOW_SKILL}
+    for name in sorted(candidates):
+        marker_text = OWNED_SKILL_MARKERS.get(name)
+        if marker_text is None:
+            warnings.append(f"unrecognized global skill will be preserved: {name}")
+            continue
+        skill_dir = runtime.skills / name
+        if skill_dir.is_symlink() or (skill_dir.exists() and not skill_dir.is_dir()):
+            warnings.append(f"unowned global skill path will be preserved: {skill_dir}")
+            continue
+        if not skill_dir.is_dir():
+            continue
+        marker = skill_dir / "SKILL.md"
+        if not marker.is_file() or marker_text not in marker.read_text(encoding="utf-8"):
+            warnings.append(f"unowned global skill will be preserved: {skill_dir}")
+            continue
+        for path in sorted(skill_dir.rglob("*")):
+            if path.is_symlink():
+                raise ValidationError(f"refusing to remove symlink in global skill: {path}")
+            if path.is_dir():
+                cleanup_dirs.append(path)
+            elif path.is_file():
+                mutations.append(Mutation(path, None))
+        cleanup_dirs.append(skill_dir)
+    return mutations, cleanup_dirs, warnings
+
+
+def plan_legacy_user_agents_cleanup(runtime: RuntimePaths) -> list[Mutation]:
+    """Remove only the obsolete workflow-owned global AGENTS.md region."""
+
+    if runtime.user_agents.is_symlink() or (
+        runtime.user_agents.exists() and not runtime.user_agents.is_file()
+    ):
+        raise ValidationError(f"user AGENTS path is not a regular file: {runtime.user_agents}")
+    if not runtime.user_agents.is_file():
+        return []
+    current = runtime.user_agents.read_text(encoding="utf-8")
+    if USER_MANAGED.start not in current and USER_MANAGED.end not in current:
+        return []
+    rendered = remove_region(current, USER_MANAGED)
+    return [
+        Mutation(
+            runtime.user_agents,
+            rendered.encode("utf-8") if rendered else None,
         )
-    before, after = managed.split(AUTO_CHECK_UPDATE_PLACEHOLDER)
-    sections = [before.strip()]
-    if enabled:
-        sections.append(instruction.strip())
-    sections.append(after.strip())
-    return "\n\n".join(section for section in sections if section)
-
-
-def _plan_user_agents_from_sources(
-    source_path: Path,
-    instruction_path: Path,
-    runtime: RuntimePaths,
-    *,
-    enabled: bool,
-) -> list[Mutation]:
-    source = source_path.read_text(encoding="utf-8")
-    instruction = instruction_path.read_text(encoding="utf-8")
-    managed = _render_user_managed(source, instruction, enabled=enabled)
-    if runtime.user_agents.is_file():
-        current = runtime.user_agents.read_text(encoding="utf-8")
-        if USER_MANAGED.start in current or USER_MANAGED.end in current:
-            rendered = replace(current, USER_MANAGED, managed)
-        else:
-            rendered = append_region(current, USER_MANAGED, managed)
-        for legacy_id in LEGACY_USER_IDS:
-            rendered = rendered.replace(legacy_id, USER_ID)
-    else:
-        rendered = append_region("", USER_MANAGED, managed)
-    return [text_mutation(runtime.user_agents, rendered)]
-
-
-def plan_user_agents(
-    package: PackageLayout, runtime: RuntimePaths, *, enabled: bool
-) -> list[Mutation]:
-    return _plan_user_agents_from_sources(
-        package.root / "user_AGENTS.md",
-        package.root / "resources" / "auto_check_update.md",
-        runtime,
-        enabled=enabled,
-    )
-
-
-def plan_installed_user_agents(
-    runtime: RuntimePaths, *, enabled: bool
-) -> list[Mutation]:
-    return _plan_user_agents_from_sources(
-        runtime.runtime / "user_AGENTS.md",
-        runtime.runtime / "resources" / "auto_check_update.md",
-        runtime,
-        enabled=enabled,
-    )
+    ]
 
 
 def plan_platform_and_workers(
@@ -255,18 +256,25 @@ def plan_runtime_remove(
         runtime.skills.exists() and not runtime.skills.is_dir()
     ):
         raise ValidationError(f"Codex skills path is not a directory: {runtime.skills}")
-    skill_dir = runtime.skills / MAINTAINER_SKILL
-    if skill_dir.is_dir() and not skill_dir.is_symlink():
-        marker = skill_dir / "SKILL.md"
-        if marker.is_file() and MAINTAINER_SKILL_OWNER in marker.read_text(
-            encoding="utf-8"
-        ):
-            mutations.append(Mutation(marker, None))
-            cleanup_dirs.append(skill_dir)
-        else:
-            warnings.append(f"unowned global skill will be preserved: {skill_dir}")
-    elif skill_dir.exists():
-        warnings.append(f"unowned global skill path will be preserved: {skill_dir}")
+    for skill_name, owner_marker in OWNED_SKILL_MARKERS.items():
+        skill_dir = runtime.skills / skill_name
+        if skill_dir.is_dir() and not skill_dir.is_symlink():
+            marker = skill_dir / "SKILL.md"
+            if marker.is_file() and owner_marker in marker.read_text(encoding="utf-8"):
+                for path in sorted(skill_dir.rglob("*")):
+                    if path.is_symlink():
+                        raise ValidationError(
+                            f"refusing to remove symlink in global skill: {path}"
+                        )
+                    if path.is_dir():
+                        cleanup_dirs.append(path)
+                    elif path.is_file():
+                        mutations.append(Mutation(path, None))
+                cleanup_dirs.append(skill_dir)
+            else:
+                warnings.append(f"unowned global skill will be preserved: {skill_dir}")
+        elif skill_dir.exists():
+            warnings.append(f"unowned global skill path will be preserved: {skill_dir}")
 
     if runtime.user_agents.is_symlink() or (
         runtime.user_agents.exists() and not runtime.user_agents.is_file()

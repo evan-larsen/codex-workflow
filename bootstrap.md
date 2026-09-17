@@ -20,7 +20,7 @@ validate the package:
 python3 codex_workflow/workflow.py validate --package-root codex_workflow --json
 ```
 
-Stop on any validation error. From the project being bootstrapped, run:
+Stop on any validation error. Run:
 
 ```text
 python3 <extracted>/codex_workflow/workflow.py bootstrap \
@@ -28,18 +28,17 @@ python3 <extracted>/codex_workflow/workflow.py bootstrap \
   --project <project>
 ```
 
-The bootstrap installs the shared runtime, templates, source backup, user
-command block, installation state, distributed worker TOMLs, and
-workflow-owned Codex settings. It also initializes the current project's
-workflow entry point, personalization and state files, and other project-level
-assets in one compensating transaction.
+The bootstrap installs the shared runtime, global `$codex-workflow` skill,
+source backup, installation state, distributed worker TOMLs, and workflow-owned
+Codex settings in one compensating transaction. The retained `--project`
+argument is compatibility metadata only; bootstrap does not create or modify a
+project `AGENTS.md`, personalization, project state, or project documentation.
 
 ## Session memory is opt-in
 
-Installation does not create or populate `agent_docs/`, recover template files,
-or launch a documentation worker. Existing documents are preserved. Missing
-session-memory documents do not make installation incomplete. After successful
-installation, report completion directly and restart Codex.
+Installation does not create or populate `agent_docs/` or recover template
+files. Existing project files are preserved. After successful installation,
+report completion directly and restart Codex.
 
 If the user explicitly asks to enable session memory, agree on a small document
 scope and initialize only those files from verified facts. Do not initialize a
