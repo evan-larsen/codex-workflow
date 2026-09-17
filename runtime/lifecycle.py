@@ -8,7 +8,7 @@ from pathlib import Path
 from . import RUNTIME_SCHEMA_VERSION
 from .backup import append_backup_mutations
 from .errors import ValidationError
-from .layout import USER_STATE, PackageLayout, ProjectPaths, RuntimePaths
+from .layout import MAINTAINER_SKILL, USER_STATE, PackageLayout, ProjectPaths, RuntimePaths
 from .personalization import materialize_personalization
 from .plan import (
     OperationPlan,
@@ -45,6 +45,7 @@ def plan_bootstrap(
         "version": package.version,
         "owned_runtime_files": sorted(owned_runtime),
         "owned_workers": sorted(package.worker_names),
+        "owned_skills": [MAINTAINER_SKILL],
         "auto_check_update": False,
     }
     mutations.append(json_mutation(runtime.runtime / USER_STATE, state))
@@ -95,6 +96,7 @@ def plan_remove(
                 "unrelated user AGENTS.md content",
                 "unrelated Codex config.toml keys",
                 "unrelated worker TOMLs",
+                "unrelated global skills",
             ],
         },
         cleanup_dirs=runtime_dirs + project_dirs,
@@ -155,6 +157,7 @@ def plan_update(
         "version": incoming.version,
         "owned_runtime_files": sorted(owned_runtime),
         "owned_workers": sorted(incoming.worker_names),
+        "owned_skills": [MAINTAINER_SKILL],
         "auto_check_update": auto_check_update,
     }
     mutations.append(json_mutation(runtime.runtime / USER_STATE, state))

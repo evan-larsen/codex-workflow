@@ -2,7 +2,7 @@
 
 Portable, deterministic lifecycle tooling for installing a generic Codex
 workflow into a user runtime and project. The CLI slug is `codex_workflow` and
-the canonical package version is `2.0.0`.
+the canonical package version is `2.0.1`.
 
 The package owns only its marked user/project regions, marked worker files, and
 workflow settings. Existing unowned role files are never overwritten. The
@@ -35,7 +35,7 @@ Run the following from the project you want to configure, changing `$Version`
 if you are installing another published release:
 
 ```powershell
-$Version = '2.0.0'
+$Version = '2.0.1'
 $BaseUrl = "https://github.com/evan-larsen/codex-workflow/releases/download/v$Version"
 $Download = Join-Path $env:TEMP "codex-workflow-$Version"
 New-Item -ItemType Directory -Force -Path $Download | Out-Null

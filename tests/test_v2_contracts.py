@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -16,7 +17,14 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from runtime.errors import ValidationError
-from runtime.layout import PackageLayout, ProjectPaths, RuntimePaths
+from runtime.layout import (
+    MAINTAINER_SKILL,
+    MAINTAINER_SKILL_OWNER,
+    PackageLayout,
+    ProjectPaths,
+    RuntimePaths,
+)
+from runtime.lifecycle import plan_bootstrap, plan_remove, plan_update
 from runtime.markers import PROJECT_PERSONALIZATION, remove_region
 from runtime.personalization import materialize_personalization
 from runtime.project_ops import plan_project_install, plan_project_update
@@ -32,7 +40,7 @@ class V2ContractTests(unittest.TestCase):
         cls.package = PackageLayout.resolve(PACKAGE_ROOT)
 
     def test_package_validation_requires_auditor_and_v2_metadata(self):
-        self.assertEqual(self.package.version, "2.0.0")
+        self.assertEqual(self.package.version, "2.0.1")
         self.assertIn("auditor", self.package.worker_names)
         self.package.validate()
 
@@ -156,7 +164,7 @@ Decision: No additional decisions.
                 self.assertTrue(all(name == "codex_workflow" or name.startswith("codex_workflow/") for name in bundle.namelist()))
                 bundle.extractall(Path(directory) / "extracted")
             extracted = PackageLayout.resolve(Path(directory) / "extracted" / "codex_workflow")
-            self.assertEqual(extracted.version, "2.0.0")
+            self.assertEqual(extracted.version, "2.0.1")
 
     def test_bootstrap_scripts_expose_checksum_and_project_inputs(self):
         powershell = (PACKAGE_ROOT / "scripts" / "bootstrap.ps1").read_text(encoding="utf-8")
@@ -183,7 +191,7 @@ Decision: No additional decisions.
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(package_result.returncode, 0, package_result.stdout + package_result.stderr)
-            archive = package_output / "codex_workflow-2.0.0.zip"
+            archive = package_output / "codex_workflow-2.0.1.zip"
             self.assertTrue(archive.is_file())
             self.assertTrue((package_output / "SHA256SUMS").is_file())
             fake_bin = root / "bin"
@@ -207,6 +215,62 @@ Decision: No additional decisions.
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertTrue((project / "AGENTS.md").is_file())
             self.assertTrue((home / "codex_workflow" / "install_state.json").is_file())
+
+    def test_bootstrap_installs_owned_global_maintainer_skill(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / "codex-home"
+            project = ProjectPaths(Path(directory) / "project")
+            plan_bootstrap(self.package, RuntimePaths(home), project).apply()
+            skill = home / "skills" / MAINTAINER_SKILL / "SKILL.md"
+            self.assertTrue(skill.is_file())
+            self.assertIn(MAINTAINER_SKILL_OWNER, skill.read_text(encoding="utf-8"))
+            state = json.loads((home / "codex_workflow" / "install_state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["owned_skills"], [MAINTAINER_SKILL])
+
+    def test_unowned_global_skill_collision_is_rejected_without_mutation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / "codex-home"
+            project = ProjectPaths(Path(directory) / "project")
+            skill = home / "skills" / MAINTAINER_SKILL
+            skill.mkdir(parents=True)
+            marker = skill / "SKILL.md"
+            marker.write_text("---\nname: unrelated\n---\n", encoding="utf-8")
+            with self.assertRaises(ValidationError):
+                plan_bootstrap(self.package, RuntimePaths(home), project)
+            self.assertEqual(marker.read_text(encoding="utf-8"), "---\nname: unrelated\n---\n")
+            self.assertFalse((home / "codex_workflow").exists())
+
+    def test_update_replaces_owned_global_skill(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "codex-home"
+            project = ProjectPaths(root / "project")
+            runtime = RuntimePaths(home)
+            plan_bootstrap(self.package, runtime, project).apply()
+            incoming_root = root / "incoming"
+            shutil.copytree(PACKAGE_ROOT, incoming_root)
+            incoming_skill = incoming_root / "skills" / MAINTAINER_SKILL / "SKILL.md"
+            incoming_skill.write_text(
+                incoming_skill.read_text(encoding="utf-8") + "\nUpdated test content.\n",
+                encoding="utf-8",
+            )
+            incoming = PackageLayout.resolve(incoming_root)
+            plan_update(incoming, runtime, project).apply()
+            self.assertIn("Updated test content.", (home / "skills" / MAINTAINER_SKILL / "SKILL.md").read_text(encoding="utf-8"))
+
+    def test_remove_deletes_owned_skill_but_preserves_unowned_skill(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "codex-home"
+            project = ProjectPaths(root / "project")
+            runtime = RuntimePaths(home)
+            plan_bootstrap(self.package, runtime, project).apply()
+            unowned = home / "skills" / "unrelated"
+            unowned.mkdir(parents=True)
+            (unowned / "SKILL.md").write_text("---\nname: unrelated\n---\n", encoding="utf-8")
+            plan_remove(runtime, project).apply()
+            self.assertFalse((home / "skills" / MAINTAINER_SKILL).exists())
+            self.assertTrue((unowned / "SKILL.md").is_file())
 
 
 if __name__ == "__main__":

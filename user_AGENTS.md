@@ -1,5 +1,5 @@
 <!-- codex-workflow-user-id: codex_workflow -->
-<!-- codex-workflow-version: 2.0.0 -->
+<!-- codex-workflow-version: 2.0.1 -->
 <!-- codex-workflow-user-managed-start -->
 # AGENTS.md
 

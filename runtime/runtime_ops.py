@@ -11,6 +11,8 @@ from .platform_settings import (
 from .errors import ValidationError
 from .layout import (
     LEGACY_USER_IDS,
+    MAINTAINER_SKILL,
+    MAINTAINER_SKILL_OWNER,
     USER_ID,
     USER_STATE,
     WORKER_MARKER,
@@ -71,6 +73,7 @@ def plan_runtime_files(
         owned.add(target.relative_to(runtime.runtime).as_posix())
     mutations.extend(plan_user_agents(package, runtime, enabled=auto_check_update))
     mutations.extend(plan_platform_and_workers(runtime, package=package))
+    mutations.extend(plan_maintainer_skill(package, runtime))
     backup = runtime.runtime / ".source_backup" / package.version
     for source in sorted(package.root.rglob("*")):
         if (
@@ -84,6 +87,48 @@ def plan_runtime_files(
                 Mutation(backup / source.relative_to(package.root), source.read_bytes())
             )
     return mutations, owned
+
+
+def plan_maintainer_skill(package: PackageLayout, runtime: RuntimePaths) -> list[Mutation]:
+    """Install the workflow-owned maintainer skill in Codex's global skill root.
+
+    An existing unmarked directory is unrelated user content and is never
+    overwritten. A matching ownership marker is the only proof accepted for
+    replacement during an update.
+    """
+
+    source_dir = package.root / "skills" / MAINTAINER_SKILL
+    target_dir = runtime.skills / MAINTAINER_SKILL
+    if runtime.skills.is_symlink() or (
+        runtime.skills.exists() and not runtime.skills.is_dir()
+    ):
+        raise ValidationError(f"Codex skills path is not a directory: {runtime.skills}")
+    if target_dir.is_symlink() or (
+        target_dir.exists() and not target_dir.is_dir()
+    ):
+        raise ValidationError(
+            f"refusing to replace non-directory maintainer skill: {target_dir}"
+        )
+    if target_dir.is_dir():
+        marker = target_dir / "SKILL.md"
+        if not marker.is_file() or MAINTAINER_SKILL_OWNER not in marker.read_text(
+            encoding="utf-8"
+        ):
+            raise ValidationError(
+                f"refusing to replace unowned global skill: {target_dir}"
+            )
+
+    mutations: list[Mutation] = []
+    for source in sorted(source_dir.rglob("*")):
+        if source.is_symlink() or not source.is_file():
+            continue
+        relative = source.relative_to(source_dir)
+        mutations.append(
+            Mutation(target_dir / relative, source.read_bytes())
+        )
+    if not mutations:
+        raise ValidationError("package maintainer skill has no files")
+    return mutations
 
 
 def _render_user_managed(source: str, instruction: str, *, enabled: bool) -> str:
@@ -203,7 +248,25 @@ def plan_runtime_remove(
     warnings = [
         "unrelated content in the user AGENTS.md and config.toml will be preserved",
         "unrelated worker TOMLs will be preserved",
+        "unrelated global skills will be preserved",
     ]
+
+    if runtime.skills.is_symlink() or (
+        runtime.skills.exists() and not runtime.skills.is_dir()
+    ):
+        raise ValidationError(f"Codex skills path is not a directory: {runtime.skills}")
+    skill_dir = runtime.skills / MAINTAINER_SKILL
+    if skill_dir.is_dir() and not skill_dir.is_symlink():
+        marker = skill_dir / "SKILL.md"
+        if marker.is_file() and MAINTAINER_SKILL_OWNER in marker.read_text(
+            encoding="utf-8"
+        ):
+            mutations.append(Mutation(marker, None))
+            cleanup_dirs.append(skill_dir)
+        else:
+            warnings.append(f"unowned global skill will be preserved: {skill_dir}")
+    elif skill_dir.exists():
+        warnings.append(f"unowned global skill path will be preserved: {skill_dir}")
 
     if runtime.user_agents.is_symlink() or (
         runtime.user_agents.exists() and not runtime.user_agents.is_file()

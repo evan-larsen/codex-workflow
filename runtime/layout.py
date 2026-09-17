@@ -44,6 +44,8 @@ def is_user_owned(text: str, *, allow_legacy: bool = False) -> bool:
 WORKER_MARKER = re.compile(r"^# codex-workflow-worker: ([A-Za-z0-9_-]+)$", re.MULTILINE)
 PROJECT_STATE = "state.json"
 USER_STATE = "install_state.json"
+MAINTAINER_SKILL = "codex-workflow-maintainer"
+MAINTAINER_SKILL_OWNER = "<!-- codex-workflow-maintainer-owner: codex_workflow -->"
 BUILTIN_WORKERS = frozenset(
     {
         "default_executor",
@@ -114,6 +116,11 @@ class PackageLayout:
             raise ValidationError("package version and user marker disagree")
         managed_user_agents = extract(user_agents_text, USER_MANAGED)
         if not allow_legacy:
+            skill = self.root / "skills" / MAINTAINER_SKILL / "SKILL.md"
+            if not skill.is_file():
+                raise ValidationError("package maintainer skill is missing")
+            if MAINTAINER_SKILL_OWNER not in skill.read_text(encoding="utf-8"):
+                raise ValidationError("package maintainer skill ownership marker is missing")
             if managed_user_agents.count(AUTO_CHECK_UPDATE_PLACEHOLDER) != 1:
                 raise ValidationError(
                     "package user_AGENTS.md auto-check placeholder is missing or duplicated"
@@ -229,6 +236,10 @@ class RuntimePaths:
     @property
     def agents(self) -> Path:
         return self.codex_home / "agents"
+
+    @property
+    def skills(self) -> Path:
+        return self.codex_home / "skills"
 
     @property
     def config_toml(self) -> Path:

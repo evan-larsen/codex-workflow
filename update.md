@@ -56,3 +56,8 @@ content automatically. A downgrade additionally requires `--allow-downgrade`.
 
 Report the installed version, preserved preferences, backup location, and any failure.
 Do not describe a partial or rolled-back update as successful.
+
+An update also replaces the workflow-owned global maintainer skill at
+`~/.codex/skills/codex-workflow-maintainer/SKILL.md`. An unmarked skill at that
+path is treated as unrelated and blocks the update. Refresh or restart Codex
+after the update so the new skill is discovered.
