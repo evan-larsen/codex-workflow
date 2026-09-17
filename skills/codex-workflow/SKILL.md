@@ -31,6 +31,13 @@ direct five-line fix can be faster and cheaper than starting a worker that
 rediscovers the module. A substantial package is usually better owned by a Luna
 worker so the coordinator retains context.
 
+For a delegated package, keep the coordinator lifecycle minimal: make one
+routing decision, dispatch once, wait for events, make at most one grouped
+repair decision, and finish. Additional coordinator turns require a user scope
+change, blocking worker question, failed criterion, or new material evidence.
+Never use a message, follow-up task, or status check merely to ask whether a
+worker is still running.
+
 If subagents are unavailable, continue directly when safe. Ask for a different
 session model only when the user's requested outcome specifically requires
 multi-agent execution that the current session cannot provide.
@@ -46,6 +53,10 @@ micro-edits. Use one targeted inspection batch, make the edit, and run at most
 one proportionate check. Escalate only when the first evidence changes the
 boundary or reveals material risk.
 
+Use this direct path for an obvious micro follow-up when the coordinator already
+knows the exact seam from a worker report. Do not wake a completed worker for a
+change that is faster to patch and verify directly.
+
 ### Delegate
 
 Use one `default_executor` for a coherent implementation whose local discovery,
@@ -54,6 +65,12 @@ high Fast is the normal production lane. Give it the outcome, ownership,
 starting references, constraints, acceptance criteria, non-goals, and the
 smallest appropriate verification boundary. Do not prescribe every file,
 helper, or command.
+
+Spawn named workflow roles with `fork_turns: "none"` and a compact task capsule.
+Use a small positive turn slice only when recent conversation is uniquely
+necessary. Never use an omitted or `"all"` history fork: it copies bloated
+context and can inherit the expensive coordinator model instead of the role's
+Luna configuration. Do not override the role's model or reasoning defaults.
 
 ### Parallelize
 
@@ -70,10 +87,10 @@ dispatch. Otherwise do not load it.
 ### Difficult slice
 
 Use at most one `senior_executor` for the smallest bounded mathematical,
-logical, integration, or cross-cutting slice that genuinely needs Luna xhigh.
-Large files, native code, duration, breadth, or a large context window do not
-qualify by themselves. The senior executor never becomes another coordinator
-and does not spawn subagents.
+logical, integration, or cross-cutting slice that genuinely needs Luna xhigh
+Fast. Large files, native code, duration, breadth, or a large context window do
+not qualify by themselves. The senior executor never becomes another
+coordinator and does not spawn subagents.
 
 ### Diagnose or review
 
@@ -84,6 +101,32 @@ material correctness, security, persistence, migration, release, or integration
 risk. Add a `tester` only when executable independent verification has clear
 value under the verification rules.
 
+### Research external evidence (rare)
+
+Use at most one `researcher`. Spawn it when the user explicitly requests a
+dedicated research agent or research subagent.
+
+Without that explicit request, use it only when every condition below is true:
+
+- a named external uncertainty blocks a material architecture, feasibility, or
+  debugging decision;
+- the research is a standalone package with at least three independent
+  questions to resolve;
+- answering those questions requires reconciling at least three distinct
+  primary-source families, such as separate vendor documentation, standards,
+  versioned platform contracts, or authoritative source repositories;
+- the package requires sustained browsing and synthesis with a plan for at
+  least eight substantive source retrievals; search-result pages and repeated
+  opens of the same source do not count; and
+- current repository evidence or one `investigator` cannot answer it.
+
+A single API signature, SDK option, error message, documentation page, release
+note, or ordinary compatibility check never qualifies automatically. The
+coordinator or current executor performs those targeted lookups directly. Give
+the researcher one precise decision question, the required source boundaries,
+and the expected synthesis. It is read-only and returns one compact evidence
+brief; it does not implement the result.
+
 ## Preserve continuity
 
 Reuse the current worker whenever a follow-up remains in the same module,
@@ -91,6 +134,10 @@ invariant, or ownership surface. Send only the changed requirement, new
 evidence, failed criterion, and next action. Do not make a fresh worker reread
 the repository, skills, documentation, and source merely because the user sent
 another message.
+
+The direct micro-follow-up rule is the exception: reuse worker context only when
+the follow-up still needs local discovery, nontrivial implementation, or repair
+of that worker's failed criterion.
 
 Use a fresh worker when the task is genuinely different, independence is the
 point, previous context became misleading, ownership conflicts, or the prior
@@ -119,6 +166,13 @@ event-driven wait available. Do not poll for reassurance, emit unchanged status
 updates, or wake the coordinator merely to acknowledge a report. Process all
 available reports together, make the smallest next decision, and resume work.
 
+Workers do not send routine progress messages to the coordinator while
+progressing. They contact it only for a blocking decision that changes scope or
+authority, then return one terminal report. Do not relay worker progress
+between agents. Use `send_message` only for new user requirements or material
+evidence, and `followup_task` only for a defined next unit of work on an idle
+worker.
+
 Workers return compact evidence and retain large logs locally. Accept routine
 proof without replaying it unless reports conflict or a material decision needs
 the decisive source.
@@ -134,6 +188,12 @@ Finish when the requested outcome is complete and proportionate evidence
 passes. Report checks actually run, material limitations, and any required
 build or manual validation. Do not add a closure worker, documentation ceremony,
 or worker-statistics task.
+
+End this workflow activation when the coherent outcome is complete. A later
+unrelated request is a new outcome, not a reason to revive old workers or carry
+their routing state. If the current thread is already materially large or has
+compacted, recommend a fresh chat once because retained conversation context
+continues to add latency and usage; continue in place if the user prefers.
 
 For installing, updating, removing, enabling, disabling, personalizing, or
 releasing codex_workflow itself, read

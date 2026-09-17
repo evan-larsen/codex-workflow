@@ -2,7 +2,7 @@
 
 Portable, deterministic lifecycle tooling for installing a generic Codex
 workflow into a user runtime. The CLI slug is `codex_workflow` and
-the canonical package version is `2.0.4`.
+the canonical package version is `2.0.6`.
 
 The package owns only its runtime directory, marked worker files, global skill,
 and workflow settings. Existing unowned role files and project files are never
@@ -34,7 +34,7 @@ Run the following from the project you want to configure, changing `$Version`
 if you are installing another published release:
 
 ```powershell
-$Version = '2.0.4'
+$Version = '2.0.6'
 $BaseUrl = "https://github.com/evan-larsen/codex-workflow/releases/download/v$Version"
 $Download = Join-Path $env:TEMP "codex-workflow-$Version"
 New-Item -ItemType Directory -Force -Path $Download | Out-Null
@@ -87,13 +87,25 @@ you want coordinated execution; there are no Light, Medium, or Heavy modes to
 choose between. The coordinator selects the smallest useful shape for the
 outcome: direct work for known micro-seams, one Luna High Fast executor for a
 bounded implementation, parallel executors for disjoint ownership, or one Luna
-xhigh senior executor for a genuinely hard reasoning slice.
+xhigh Fast senior executor for a genuinely hard reasoning slice.
+One read-only Luna xhigh Fast researcher is available for an explicitly
+requested research assignment or an unusually large external-evidence package;
+ordinary documentation and API lookups stay with the current agent.
+The installer caps concurrent Codex agent threads at 10 to prevent accidental
+fan-out; normal packages should use far fewer and add workers only when they
+shorten the critical path.
+
+Workers start from compact task capsules rather than full parent-chat forks, so
+their packaged Luna model settings remain authoritative and long coordinator
+history is not copied into every worker.
 
 The workflow optimizes the critical path. It reuses workers for related
 follow-ups, skips investigators unless uncertainty blocks implementation,
 groups tester findings into one repair packet, waits on lifecycle events rather
-than polling, and runs proportionate verification once the coherent change is
-stable. It does not create a companion or closure worker.
+than polling, avoids routine worker-to-coordinator status traffic, and runs
+proportionate verification once the coherent change is stable. Obvious micro
+follow-ups use the direct fast path when the seam is already known. It does not
+create a companion or closure worker.
 
 The packaged skill and worker templates are canonical release artifacts.
 Lifecycle tests verify that archives and installed runtimes preserve them and

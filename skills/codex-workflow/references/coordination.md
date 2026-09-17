@@ -15,9 +15,26 @@ place an investigator in front of implementation unless a named uncertainty
 actually blocks the implementation boundary. When an uncertainty can be
 resolved alongside independent implementation, run it concurrently.
 
+Treat external research as a separate rare lane. Use the `researcher` gate in
+the main skill before dispatch; a routine documentation lookup is never a
+research package. When the gate is met, keep broad browsing and source material
+inside the researcher and pass only its terminal evidence brief to the
+implementation owner. Do not make an unblocked executor wait for unrelated
+research.
+
+Do not wait for every read-only lane before starting an implementation package
+whose ownership and acceptance criteria are already clear. Dispatch the
+unblocked critical-path work immediately and apply later evidence only if it
+changes that package.
+
 Use one implementation owner for each mutable surface and name one integration
 owner when a behavior spans packages. Shared documentation has one edit owner.
 Other workers return verified facts instead of making overlapping edits.
+
+Spawn every named workflow role with `fork_turns: "none"` and include the
+smallest self-contained capsule it needs. Use a small positive turn slice only
+when the recent exchange is itself required evidence. Never fork the complete
+coordinator history or override the role's packaged model and reasoning level.
 
 ## Avoid coordinator traffic
 
@@ -25,6 +42,12 @@ Do not create Companion. Workers report directly to the main coordinator. The
 coordinator processes all reports available at a lifecycle wake in one turn.
 It does not forward every report to another agent, acknowledge delivery, or act
 as a proxy between an executor and tester.
+
+For one worker, the normal coordinator sequence is dispatch, event-driven wait,
+terminal report, final answer. For several workers, dispatch ready work in one
+batch and harvest available reports together. Workers do not send routine
+progress updates. A coordinator message is justified only by a changed user
+requirement, new material evidence, or a blocking decision; it is never a ping.
 
 Pair a tester with the responsible executor. The tester sends one prioritized,
 deduplicated defect packet directly to that executor. The executor performs one
@@ -38,6 +61,11 @@ Continue the existing worker for repairs and adjacent follow-ups within its
 ownership. A follow-up contains only the task ID, changed requirement or state,
 new evidence, affected acceptance criterion, and next action. Never resend the
 original prompt or ask for a fresh inventory.
+
+Handle an obvious reversible micro follow-up directly when the coordinator
+already knows the exact seam and can patch and check it in one short cycle.
+Wake the existing worker only when the follow-up needs its local discovery,
+nontrivial implementation, or repair context.
 
 Replace a worker only after one evidence-oriented retry fails, its context is
 materially stale or confused, or independent judgment is required.

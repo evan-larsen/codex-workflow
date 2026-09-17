@@ -8,7 +8,7 @@ from ._toml import tomllib
 from .errors import ValidationError
 
 
-MAX_CONCURRENT_WORKERS = 20
+MAX_CONCURRENT_WORKERS = 10
 
 
 def patch_codex_settings(text: str) -> str:

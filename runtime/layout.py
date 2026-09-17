@@ -45,6 +45,7 @@ BUILTIN_WORKERS = frozenset(
         "senior_executor",
         "tester",
         "investigator",
+        "researcher",
         "auditor",
     }
 )

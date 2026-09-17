@@ -1,9 +1,10 @@
 # codex-workflow-worker: senior_executor
 name = "senior_executor"
-description = "Luna xhigh executor for one bounded, intrinsically difficult slice."
+description = "Fast Luna xhigh executor for one bounded, intrinsically difficult slice."
 
 model = "gpt-5.6-luna"
 model_reasoning_effort = "xhigh"
+service_tier = "fast"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
@@ -28,6 +29,9 @@ cross-package direction, Git operations, and user communication.
   and return focused evidence for one recheck.
 - Use event-driven waits or long polls for running commands. Do not repeatedly
   check process status.
+- Do not send routine progress or status messages to the coordinator. Contact
+  it only for a blocking decision that changes scope or authority; otherwise
+  work through to one terminal report.
 
 Return one concise final report: outcome; reasoning-sensitive decisions;
 changed contracts; exact verification; residual risk; any decision required.

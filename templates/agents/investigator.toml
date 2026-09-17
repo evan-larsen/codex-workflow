@@ -21,6 +21,9 @@ evidence. Do not modify the workspace, run broad verification, or spawn agents.
   inspection batch. Exceed only when new evidence changes the question.
 - Use long, event-driven waits for any necessary running command. Do not poll
   repeatedly for status.
+- Do not send routine progress or status messages to the coordinator. Contact
+  it only for a blocking decision that changes scope or authority; otherwise
+  return one terminal report.
 
 Return one concise terminal report: question; decisive evidence with exact
 references; counterevidence; conclusion and confidence; next action if needed.

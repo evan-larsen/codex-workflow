@@ -21,6 +21,9 @@ the workspace or spawning agents.
 - Default budget: at most 8 outer tool calls. Exceed only when new evidence
   changes the review boundary.
 - Use long, event-driven waits instead of repeated status polling.
+- Do not send routine progress or status messages to the coordinator. Contact
+  it only for a blocking decision that changes scope or authority; otherwise
+  return one terminal report.
 
 Return PASS, PASS WITH UNVERIFIED RISK, or CHANGES REQUIRED; material findings
 ordered by severity with exact references; checks performed; limitations; and

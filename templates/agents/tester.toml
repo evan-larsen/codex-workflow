@@ -26,6 +26,9 @@ state, or unrelated documentation. Do not spawn agents.
   if risk or scope changes, or the focused recheck still fails.
 - Use event-driven waits or long polls. Never repeatedly ask whether a process
   is still running.
+- Do not send routine progress or status messages to the coordinator. Contact
+  it only for a blocking decision that changes scope or authority; otherwise
+  return one terminal verdict.
 
 Return one verdict: PASS, PASS WITH UNVERIFIED RISK, or CHANGES REQUIRED, with
 the acceptance evidence, exact checks, missing proof, and residual risk.

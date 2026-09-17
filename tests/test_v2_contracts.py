@@ -41,10 +41,17 @@ class V2ContractTests(unittest.TestCase):
         cls.package = PackageLayout.resolve(PACKAGE_ROOT)
 
     def test_package_validation_requires_expected_workers_and_v2_metadata(self):
-        self.assertEqual(self.package.version, "2.0.4")
+        self.assertEqual(self.package.version, "2.0.6")
         self.assertEqual(
             self.package.worker_names,
-            {"auditor", "default_executor", "investigator", "senior_executor", "tester"},
+            {
+                "auditor",
+                "default_executor",
+                "investigator",
+                "researcher",
+                "senior_executor",
+                "tester",
+            },
         )
         self.package.validate()
 
@@ -70,10 +77,20 @@ class V2ContractTests(unittest.TestCase):
             "Use one `default_executor`",
             "Reuse the current worker",
             "Run a justified broad suite once at the end",
+            "keep the coordinator lifecycle minimal",
+            "Do not wake a completed worker",
+            'fork_turns: "none"',
+            "End this workflow activation",
+            "at least three independent questions",
+            "at least eight substantive source retrievals",
+            "never qualifies automatically",
         ):
             self.assertIn(requirement, skill_compact)
         self.assertIn("Do not create Companion", coordination_compact)
         self.assertIn("one prioritized, deduplicated defect packet", coordination_compact)
+        self.assertIn("Workers do not send routine progress updates", coordination_compact)
+        self.assertIn("obvious reversible micro follow-up directly", coordination_compact)
+        self.assertIn('fork_turns: "none"', coordination_compact)
         self.assertIn("allow_implicit_invocation: false", metadata)
         self.assertIn("# Project instructions", project_compact)
         self.assertNotIn("$codex-workflow", project)
@@ -100,26 +117,40 @@ class V2ContractTests(unittest.TestCase):
                 'service_tier = "fast"',
                 "no more than 12 outer tool calls",
                 "Do not create a one-defect-per-turn loop",
+                "Do not send routine progress or status messages to the coordinator",
             ),
             "investigator": (
                 'service_tier = "fast"',
                 "at most 6 outer tool calls",
                 "Stop as soon as the coordinator can make the named decision",
+                "Do not send routine progress or status messages to the coordinator",
             ),
             "senior_executor": (
                 'model_reasoning_effort = "xhigh"',
+                'service_tier = "fast"',
                 "at most 16 outer tool calls",
                 "Do not coordinate or spawn agents",
+                "Do not send routine progress or status messages to the coordinator",
+            ),
+            "researcher": (
+                'model_reasoning_effort = "xhigh"',
+                'service_tier = "fast"',
+                "at least three independent research questions",
+                "at least three distinct primary-source families",
+                "Do not modify the workspace, implement code, or spawn agents",
+                "Do not send routine progress or status messages to the coordinator",
             ),
             "tester": (
                 'service_tier = "fast"',
                 "at most 8 outer tool calls",
                 "one prioritized packet",
+                "Do not send routine progress or status messages to the coordinator",
             ),
             "auditor": (
                 'service_tier = "fast"',
                 "at most 8 outer tool calls",
                 "Do not run tests, lint, formatting, builds, or environment checks",
+                "Do not send routine progress or status messages to the coordinator",
             ),
         }
         for worker, requirements in required_worker_contracts.items():
@@ -255,7 +286,7 @@ Decision: No additional decisions.
                 self.assertTrue(all(name == "codex_workflow" or name.startswith("codex_workflow/") for name in bundle.namelist()))
                 bundle.extractall(Path(directory) / "extracted")
             extracted = PackageLayout.resolve(Path(directory) / "extracted" / "codex_workflow")
-            self.assertEqual(extracted.version, "2.0.4")
+            self.assertEqual(extracted.version, "2.0.6")
             for source in sorted(self.package.agent_templates.glob("*.toml")):
                 archived = (
                     Path(directory)
@@ -300,6 +331,8 @@ Decision: No additional decisions.
                 any(path.startswith(".git/") for path in state["owned_runtime_files"])
             )
             self.assertFalse((home / "AGENTS.md").exists())
+            config = (home / "config.toml").read_text(encoding="utf-8")
+            self.assertIn("max_concurrent_threads_per_session = 10", config)
             for source in sorted(self.package.agent_templates.glob("*.toml")):
                 installed = home / "agents" / source.name
                 self.assertEqual(
@@ -333,7 +366,7 @@ Decision: No additional decisions.
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(package_result.returncode, 0, package_result.stdout + package_result.stderr)
-            archive = package_output / "codex_workflow-2.0.4.zip"
+            archive = package_output / "codex_workflow-2.0.6.zip"
             self.assertTrue(archive.is_file())
             self.assertTrue((package_output / "SHA256SUMS").is_file())
             fake_bin = root / "bin"

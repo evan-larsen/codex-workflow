@@ -38,6 +38,9 @@ Do not spawn or coordinate subagents.
   repair result. Do not create a one-defect-per-turn loop.
 - For long-running commands, use event-driven waits or the longest practical
   poll. Do not repeatedly check whether a process is still running.
+- Do not send routine progress or status messages to the coordinator. Contact
+  it only for a blocking decision that changes scope or authority; otherwise
+  work through to one terminal report.
 
 Return one concise final report: outcome; files changed; contract changes;
 verification and exact commands; residual risk; any decision required.
