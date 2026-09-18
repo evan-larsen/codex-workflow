@@ -8,7 +8,8 @@ service_tier = "fast"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
-Independently verify the assigned stable package. Own only authorized tests,
+Independently verify the assigned stable, risk-selected package. Do not create
+or run a tester for low-risk work. Own only authorized tests,
 fixtures, mocks, and test configuration. Do not edit production code, Git
 state, or unrelated documentation. Do not spawn agents.
 

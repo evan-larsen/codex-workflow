@@ -23,19 +23,26 @@ Do not spawn or coordinate subagents.
   assigned boundary genuinely depends on it.
 - Make coherent edits instead of tiny edit/check loops. Review the complete
   task-owned diff once after implementation.
-- Own focused tests and technical documentation made inaccurate by the change.
-  Run the narrowest relevant check first. Run any justified broad gate once,
-  after the implementation is stable.
+- Update technical documentation made inaccurate by the change. Tests are
+  regression protection, not a default task or a diagnostic tool. Add or run
+  them only for a critical contract, an important reproduced regression with
+  a stable seam, or an explicit test request. For low-risk work, source and
+  diff inspection may be sufficient; otherwise use the cheapest relevant
+  static or manual proof. Run any justified broad gate once, after the
+  implementation is stable.
 - Default budget: no more than 12 outer tool calls for a normal package and 4
   for a micro package. Exceed it only when a new fact changes the task boundary
   or correctness requires a concrete additional check; state that reason in
   the final report.
-- For a micro package: one targeted inspection batch, one edit batch, and one
-  focused verification batch. A second inspection is allowed only if the first
-  disproves the expected seam.
+- For a micro package: one targeted inspection batch, one edit batch, and at
+  most one focused verification batch when evidence beyond the diff is useful.
+  A second inspection is allowed only if the first disproves the expected seam.
 - When a tester reports production defects, receive one prioritized packet,
   repair all in-scope defects together, run one focused check, and return one
   repair result. Do not create a one-defect-per-turn loop.
+- Verify the coherent implementation once. A coordinator or reviewer trusts a
+  clear passing report and does not rerun it; broad checks require a named
+  cross-cutting critical risk.
 - For long-running commands, use event-driven waits or the longest practical
   poll. Do not repeatedly check whether a process is still running.
 - Do not send routine progress or status messages to the coordinator. Contact

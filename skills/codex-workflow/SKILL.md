@@ -46,22 +46,24 @@ multi-agent execution that the current session cannot provide.
 
 ### Direct
 
-Work directly when the answer or edit has a known narrow seam and delegation
-would cost more time or context than the work itself. This includes
-conversation, metadata, targeted read-only questions, and obvious reversible
-micro-edits. Use one targeted inspection batch, make the edit, and run at most
-one proportionate check. Escalate only when the first evidence changes the
-boundary or reveals material risk.
+Direct workspace implementation is allowed only when the exact seam is already
+known, the change introduces no new behavioral contract or nontrivial stateful
+workflow, and it is expected to require one coherent patch plus at most one
+cheap, proportionate verification step. Otherwise, use one Luna High Fast
+`default_executor`.
 
-Use this direct path for an obvious micro follow-up when the coordinator already
-knows the exact seam from a worker report. Do not wake a completed worker for a
-change that is faster to patch and verify directly.
+If a direct change reveals unexpected complexity, stop before implementing the
+larger solution and hand it to `default_executor`.
+
+This direct path includes obvious reversible micro follow-ups when the
+coordinator already knows the exact seam. Do not wake a completed worker for a
+change that satisfies the direct gate.
 
 ### Delegate
 
 Use one `default_executor` for a coherent implementation whose local discovery,
 editing, and focused checks would consume meaningful coordinator context. Luna
-high Fast is the normal production lane. Give it the outcome, ownership,
+High Fast is the normal production lane. Give it the outcome, ownership,
 starting references, constraints, acceptance criteria, non-goals, and the
 smallest appropriate verification boundary. Do not prescribe every file,
 helper, or command.
@@ -94,12 +96,23 @@ coordinator and does not spawn subagents.
 
 ### Diagnose or review
 
+Read-only diagnosis, discovery, and review run zero tests, lint, formatting,
+typecheck, builds, or environment checks by default. A command is allowed only
+when its result is necessary to distinguish live hypotheses that source
+inspection cannot answer. Name the unresolved claim before running it; never
+run a check merely for confidence or because a nearby test exists.
+
+Existing unit tests are regression gates, not diagnostic probes. Do not run
+them to discover the cause of a problem. When source is inconclusive, use the
+cheapest targeted observation, log, or reproduction that distinguishes the
+live hypotheses. Do not announce skipped checks or narrate a no-test decision.
+
 Use one `investigator` when a material uncertainty must be resolved before a
 safe fix and a targeted coordinator read is insufficient. Use one `auditor`
 for an explicitly requested independent review or a stable implementation with
 material correctness, security, persistence, migration, release, or integration
 risk. Add a `tester` only when executable independent verification has clear
-value under the verification rules.
+value under the verification rules; low-risk work does not get a tester.
 
 ### Research external evidence (rare)
 
@@ -146,14 +159,22 @@ worker failed to produce usable evidence after one focused retry.
 ## Keep discovery and verification proportional
 
 For trivial visual, copy, documentation, or mechanical work, inspect the exact
-diff and run only an exact-file syntax or formatting check when relevant. Do
-not add tests or run broad suites by default.
+diff. Run no command when source and diff inspection are decisive; otherwise
+use at most one exact-file syntax or formatting check when relevant. Do not add
+tests, run broad suites, or start a tester.
 
-For local behavior, run the nearest focused test or static check. Broaden only
-for a changed shared contract, meaningful cross-package risk, a failure,
-unresolved uncertainty, or an explicit user request. Run a justified broad
-suite once at the end, not after every repair. Never repeat a passing check
-without new evidence that could invalidate it.
+For local behavior, prefer source/diff inspection and one cheap static or
+manual proof. Add a regression test only when a stable seam protects a critical
+contract or a reproduced important regression. Broaden only for a changed
+shared contract, meaningful cross-package risk, a failure, unresolved
+uncertainty, or an explicit user request. Run a justified broad suite once at
+the end, not after every repair. Never repeat a passing check without new
+evidence that could invalidate it.
+
+The implementation owner verifies once. A coordinator or reviewer trusts a
+clear passing report and does not rerun it. A commit does not trigger another
+check unless the commit changed files after the last proof. Broad suites
+require a named cross-cutting critical risk.
 
 Read [verification.md](references/verification.md) only when the change affects
 meaningful behavior, persistence, security, native or release boundaries,

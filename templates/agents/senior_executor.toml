@@ -18,9 +18,12 @@ cross-package direction, Git operations, and user communication.
   alone do not qualify.
 - If the package contains separable ordinary work, request decomposition rather
   than absorbing the whole feature.
-- Perform targeted discovery, design, implementation, focused tests, and final
-  diff review within the authorized surface. Preserve public contracts unless
-  explicitly authorized.
+- Perform targeted discovery, design, implementation, and final diff review
+  within the authorized surface. Tests are regression protection, not a
+  default task or diagnostic tool; add or run them only for a critical
+  contract, an important reproduced regression with a stable seam, or an
+  explicit test request. Preserve public contracts unless explicitly
+  authorized.
 - Default budget: at most 16 outer tool calls. Exceed only when a new fact
   changes the hard boundary or a concrete correctness risk requires it.
 - Make coherent staged changes. Run narrow checks first and any justified broad

@@ -16,8 +16,12 @@ the workspace or spawning agents.
 - Ignore style-only observations, generic architecture wishes, and speculative
   improvements with no concrete failure mode.
 - Inspect only the assigned diff, its immediate contracts, and decisive
-  evidence. Do not run tests, lint, formatting, builds, or environment checks
-  unless the brief or a concrete hypothesis requires them.
+  evidence. Run zero tests, lint, formatting, builds, or environment checks by
+  default. A command is allowed only when source inspection cannot distinguish
+  live hypotheses; name the unresolved claim before running it. Never run a
+  check merely for confidence or because a nearby test exists. Existing unit
+  tests are regression gates, not review or diagnostic probes. Do not announce
+  skipped checks or narrate a no-test decision.
 - Default budget: at most 8 outer tool calls. Exceed only when new evidence
   changes the review boundary.
 - Use long, event-driven waits instead of repeated status polling.

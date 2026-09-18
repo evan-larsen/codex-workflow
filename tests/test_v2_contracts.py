@@ -41,7 +41,7 @@ class V2ContractTests(unittest.TestCase):
         cls.package = PackageLayout.resolve(PACKAGE_ROOT)
 
     def test_package_validation_requires_expected_workers_and_v2_metadata(self):
-        self.assertEqual(self.package.version, "2.0.6")
+        self.assertEqual(self.package.version, "2.0.7")
         self.assertEqual(
             self.package.worker_names,
             {
@@ -73,10 +73,20 @@ class V2ContractTests(unittest.TestCase):
         project_compact = " ".join(project.split())
         for requirement in (
             "There are no Light, Medium, or Heavy modes",
-            "obvious reversible micro-edits",
-            "Use one `default_executor`",
+            "Direct workspace implementation is allowed only when the exact seam is already known",
+            "the change introduces no new behavioral contract or nontrivial stateful workflow",
+            "one coherent patch plus at most one cheap, proportionate verification step",
+            "Otherwise, use one Luna High Fast `default_executor`",
+            "If a direct change reveals unexpected complexity, stop before implementing the larger solution",
             "Reuse the current worker",
-            "Run a justified broad suite once at the end",
+            "Read-only diagnosis, discovery, and review run zero tests",
+            "Existing unit tests are regression gates, not diagnostic probes",
+            "Do not announce skipped checks or narrate a no-test decision",
+            "Name the unresolved claim",
+            "low-risk work does not get a tester",
+            "The implementation owner verifies once",
+            "does not rerun it",
+            "Broad suites require a named cross-cutting critical risk",
             "keep the coordinator lifecycle minimal",
             "Do not wake a completed worker",
             'fork_turns: "none"',
@@ -117,12 +127,16 @@ class V2ContractTests(unittest.TestCase):
                 'service_tier = "fast"',
                 "no more than 12 outer tool calls",
                 "Do not create a one-defect-per-turn loop",
+                "Verify the coherent implementation once",
+                "Tests are regression protection, not a default task or a diagnostic tool",
                 "Do not send routine progress or status messages to the coordinator",
             ),
             "investigator": (
                 'service_tier = "fast"',
                 "at most 6 outer tool calls",
                 "Stop as soon as the coordinator can make the named decision",
+                "Run zero tests, lint, formatting, typecheck, builds, or environment checks by default",
+                "Existing unit tests are regression gates, not diagnostic probes",
                 "Do not send routine progress or status messages to the coordinator",
             ),
             "senior_executor": (
@@ -130,6 +144,7 @@ class V2ContractTests(unittest.TestCase):
                 'service_tier = "fast"',
                 "at most 16 outer tool calls",
                 "Do not coordinate or spawn agents",
+                "Tests are regression protection, not a default task or diagnostic tool",
                 "Do not send routine progress or status messages to the coordinator",
             ),
             "researcher": (
@@ -143,13 +158,15 @@ class V2ContractTests(unittest.TestCase):
             "tester": (
                 'service_tier = "fast"',
                 "at most 8 outer tool calls",
+                "risk-selected package",
                 "one prioritized packet",
                 "Do not send routine progress or status messages to the coordinator",
             ),
             "auditor": (
                 'service_tier = "fast"',
                 "at most 8 outer tool calls",
-                "Do not run tests, lint, formatting, builds, or environment checks",
+                "Run zero tests, lint, formatting, builds, or environment checks by default",
+                "Existing unit tests are regression gates, not review or diagnostic probes",
                 "Do not send routine progress or status messages to the coordinator",
             ),
         }
@@ -286,7 +303,7 @@ Decision: No additional decisions.
                 self.assertTrue(all(name == "codex_workflow" or name.startswith("codex_workflow/") for name in bundle.namelist()))
                 bundle.extractall(Path(directory) / "extracted")
             extracted = PackageLayout.resolve(Path(directory) / "extracted" / "codex_workflow")
-            self.assertEqual(extracted.version, "2.0.6")
+            self.assertEqual(extracted.version, "2.0.7")
             for source in sorted(self.package.agent_templates.glob("*.toml")):
                 archived = (
                     Path(directory)
@@ -366,7 +383,7 @@ Decision: No additional decisions.
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(package_result.returncode, 0, package_result.stdout + package_result.stderr)
-            archive = package_output / "codex_workflow-2.0.6.zip"
+            archive = package_output / "codex_workflow-2.0.7.zip"
             self.assertTrue(archive.is_file())
             self.assertTrue((package_output / "SHA256SUMS").is_file())
             fake_bin = root / "bin"
