@@ -12,8 +12,10 @@ merely to increase worker count.
 
 Routine repository discovery belongs to the implementer that needs it. Do not
 place an investigator in front of implementation unless a named uncertainty
-actually blocks the implementation boundary. When an uncertainty can be
-resolved alongside independent implementation, run it concurrently.
+blocks a safe implementation decision and the executor cannot resolve it through
+its own targeted discovery. Never pair an investigator and executor to inspect
+the same execution path or create a read-only confirmation lane for an
+implementation that can proceed safely.
 
 Treat external research as a separate rare lane. Use the `researcher` gate in
 the main skill before dispatch; a routine documentation lookup is never a
@@ -72,11 +74,13 @@ materially stale or confused, or independent judgment is required.
 
 ## Default tool budgets
 
-These budgets are latency controls, not permission to omit necessary work. A
-worker may exceed one only when a failure or new fact changes the task boundary,
-and it must state that reason in its terminal report.
+These budgets are latency controls, not permission to omit necessary work. An
+investigator's budget is a hard stop unless the coordinator explicitly extends
+it after receiving a blocker report with a narrowed question. Other workers may
+exceed a budget only when a failure or new fact changes the task boundary, and
+must state that reason in the terminal report.
 
-- Investigator: normally at most 6 outer tool calls.
+- Investigator: hard cap of 6 outer tool calls before a blocker report.
 - Micro implementation: normally 4 outer calls—inspect, edit, verify, plus one
   adaptive call only if evidence changes the seam.
 - Bounded implementation package: normally at most 12 outer tool calls. Batch

@@ -41,7 +41,7 @@ class V2ContractTests(unittest.TestCase):
         cls.package = PackageLayout.resolve(PACKAGE_ROOT)
 
     def test_package_validation_requires_expected_workers_and_v2_metadata(self):
-        self.assertEqual(self.package.version, "2.0.7")
+        self.assertEqual(self.package.version, "2.0.8")
         self.assertEqual(
             self.package.worker_names,
             {
@@ -84,6 +84,9 @@ class V2ContractTests(unittest.TestCase):
             "Do not announce skipped checks or narrate a no-test decision",
             "Name the unresolved claim",
             "low-risk work does not get a tester",
+            "Use an `investigator` only when a named material uncertainty blocks a safe implementation decision",
+            "Never pair an investigator and executor to inspect the same execution path",
+            "Do not create an investigator to independently confirm an executor's diagnosis",
             "The implementation owner verifies once",
             "does not rerun it",
             "Broad suites require a named cross-cutting critical risk",
@@ -101,6 +104,8 @@ class V2ContractTests(unittest.TestCase):
         self.assertIn("Workers do not send routine progress updates", coordination_compact)
         self.assertIn("obvious reversible micro follow-up directly", coordination_compact)
         self.assertIn('fork_turns: "none"', coordination_compact)
+        self.assertIn("investigator's budget is a hard stop", coordination_compact)
+        self.assertIn("hard cap of 6 outer tool calls", coordination_compact)
         self.assertIn("allow_implicit_invocation: false", metadata)
         self.assertIn("# Project instructions", project_compact)
         self.assertNotIn("$codex-workflow", project)
@@ -126,6 +131,7 @@ class V2ContractTests(unittest.TestCase):
             "default_executor": (
                 'service_tier = "fast"',
                 "no more than 12 outer tool calls",
+                "Do not inspect history, broad documentation, or adjacent implementations",
                 "Do not create a one-defect-per-turn loop",
                 "Verify the coherent implementation once",
                 "Tests are regression protection, not a default task or a diagnostic tool",
@@ -134,6 +140,7 @@ class V2ContractTests(unittest.TestCase):
             "investigator": (
                 'service_tier = "fast"',
                 "at most 6 outer tool calls",
+                "Continue only after the coordinator explicitly extends the budget",
                 "Stop as soon as the coordinator can make the named decision",
                 "Run zero tests, lint, formatting, typecheck, builds, or environment checks by default",
                 "Existing unit tests are regression gates, not diagnostic probes",
@@ -303,7 +310,7 @@ Decision: No additional decisions.
                 self.assertTrue(all(name == "codex_workflow" or name.startswith("codex_workflow/") for name in bundle.namelist()))
                 bundle.extractall(Path(directory) / "extracted")
             extracted = PackageLayout.resolve(Path(directory) / "extracted" / "codex_workflow")
-            self.assertEqual(extracted.version, "2.0.7")
+            self.assertEqual(extracted.version, "2.0.8")
             for source in sorted(self.package.agent_templates.glob("*.toml")):
                 archived = (
                     Path(directory)
@@ -383,7 +390,7 @@ Decision: No additional decisions.
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(package_result.returncode, 0, package_result.stdout + package_result.stderr)
-            archive = package_output / "codex_workflow-2.0.7.zip"
+            archive = package_output / "codex_workflow-2.0.8.zip"
             self.assertTrue(archive.is_file())
             self.assertTrue((package_output / "SHA256SUMS").is_file())
             fake_bin = root / "bin"

@@ -77,10 +77,11 @@ Luna configuration. Do not override the role's model or reasoning defaults.
 ### Parallelize
 
 Use multiple `default_executor` workers only for independent mutable ownership
-surfaces. Use investigators only for independent uncertainties that block a
-decision or can run alongside useful implementation. Parallelize work that
-shortens the critical path; do not create overlapping workers or redundant
-confirmation lanes.
+surfaces. Use an `investigator` only when a named material uncertainty blocks a
+safe implementation decision and cannot be resolved through the executor's own
+targeted discovery. Never pair an investigator and executor to inspect the same
+execution path. Parallelize work that shortens the critical path; do not create
+overlapping workers or redundant confirmation lanes.
 
 For multiple workers or a task expected to require several implementation and
 verification waves, read [coordination.md](references/coordination.md) before
@@ -107,8 +108,10 @@ them to discover the cause of a problem. When source is inconclusive, use the
 cheapest targeted observation, log, or reproduction that distinguishes the
 live hypotheses. Do not announce skipped checks or narrate a no-test decision.
 
-Use one `investigator` when a material uncertainty must be resolved before a
-safe fix and a targeted coordinator read is insufficient. Use one `auditor`
+Use one `investigator` when a named material uncertainty must be resolved before
+a safe fix, a targeted coordinator read is insufficient, and no executor can
+resolve it within its own targeted discovery. Do not create an investigator to
+independently confirm an executor's diagnosis. Use one `auditor`
 for an explicitly requested independent review or a stable implementation with
 material correctness, security, persistence, migration, release, or integration
 risk. Add a `tester` only when executable independent verification has clear

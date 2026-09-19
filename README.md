@@ -2,7 +2,7 @@
 
 Portable, deterministic lifecycle tooling for installing a generic Codex
 workflow into a user runtime. The CLI slug is `codex_workflow` and
-the canonical package version is `2.0.7`.
+the canonical package version is `2.0.8`.
 
 The package owns only its runtime directory, marked worker files, global skill,
 and workflow settings. Existing unowned role files and project files are never
@@ -34,7 +34,7 @@ Run the following from the project you want to configure, changing `$Version`
 if you are installing another published release:
 
 ```powershell
-$Version = '2.0.7'
+$Version = '2.0.8'
 $BaseUrl = "https://github.com/evan-larsen/codex-workflow/releases/download/v$Version"
 $Download = Join-Path $env:TEMP "codex-workflow-$Version"
 New-Item -ItemType Directory -Force -Path $Download | Out-Null
@@ -100,10 +100,12 @@ their packaged Luna model settings remain authoritative and long coordinator
 history is not copied into every worker.
 
 The workflow optimizes the critical path. It reuses workers for related
-follow-ups, skips investigators unless uncertainty blocks implementation,
-groups tester findings into one repair packet, waits on lifecycle events rather
-than polling, avoids routine worker-to-coordinator status traffic, and runs
-proportionate verification once the coherent change is stable. Direct workspace
+follow-ups, uses an investigator only when a named material uncertainty blocks
+a safe implementation decision, never pairs an investigator and executor to
+inspect the same execution path, groups tester findings into one repair packet,
+waits on lifecycle events rather than polling, avoids routine
+worker-to-coordinator status traffic, and runs proportionate verification once
+the coherent change is stable. Direct workspace
 implementation is allowed only when the exact seam is already known, the change
 introduces no new behavioral contract or nontrivial stateful workflow, and it
 is expected to require one coherent patch plus at most one cheap check.

@@ -37,6 +37,8 @@ Do not spawn or coordinate subagents.
 - For a micro package: one targeted inspection batch, one edit batch, and at
   most one focused verification batch when evidence beyond the diff is useful.
   A second inspection is allowed only if the first disproves the expected seam.
+  Do not inspect history, broad documentation, or adjacent implementations when
+  current source already establishes the behavior and patch boundary.
 - When a tester reports production defects, receive one prioritized packet,
   repair all in-scope defects together, run one focused check, and return one
   repair result. Do not create a one-defect-per-turn loop.

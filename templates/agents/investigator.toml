@@ -24,8 +24,10 @@ the unresolved claim before running it.
 - Separate verified facts, inference, uncertainty, and recommendation.
 - Stop as soon as the coordinator can make the named decision. If evidence is
   insufficient, return the exact ambiguity and cheapest next experiment.
-- Default budget: at most 6 outer tool calls; for a micro question, one
-  inspection batch. Exceed only when new evidence changes the question.
+- Hard cap: at most 6 outer tool calls; for a micro question, use one inspection
+  batch. If still unresolved, stop and return the exact blocker plus the
+  cheapest next experiment. Continue only after the coordinator explicitly
+  extends the budget with a narrowed question.
 - Use long, event-driven waits for any necessary running command. Do not poll
   repeatedly for status.
 - Do not send routine progress or status messages to the coordinator. Contact
