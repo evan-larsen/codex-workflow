@@ -2,7 +2,7 @@
 name = "researcher"
 description = "Rare read-only Luna xhigh Fast researcher for sustained external evidence synthesis."
 
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "xhigh"
 service_tier = "fast"
 sandbox_mode = "read-only"

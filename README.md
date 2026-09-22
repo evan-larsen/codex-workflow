@@ -2,7 +2,7 @@
 
 Portable, deterministic lifecycle tooling for installing a generic Codex
 workflow into a user runtime. The CLI slug is `codex_workflow` and
-the canonical package version is `2.0.9`.
+the canonical package version is `2.0.10`.
 
 The package owns only its runtime directory, marked worker files, global skills,
 and workflow settings. Existing unowned role files and project files are never
@@ -34,7 +34,7 @@ Run the following from the project you want to configure, changing `$Version`
 if you are installing another published release:
 
 ```powershell
-$Version = '2.0.9'
+$Version = '2.0.10'
 $BaseUrl = "https://github.com/evan-larsen/codex-workflow/releases/download/v$Version"
 $Download = Join-Path $env:TEMP "codex-workflow-$Version"
 New-Item -ItemType Directory -Force -Path $Download | Out-Null
@@ -88,14 +88,15 @@ long-horizon, multi-phase or multi-surface implementation program. Both are
 installed by the same package and are explicit-only.
 
 The bounded workflow selects the smallest useful shape: direct work for known
-micro-seams, one Luna High Fast executor for a bounded implementation, parallel
-executors for disjoint ownership, or one Luna xhigh Fast senior executor for a
-genuinely hard reasoning slice. The Heavy workflow gives one Luna xhigh Fast
-`heavy_coordinator` the entire execution program; that coordinator manages the
-bounded Luna workers while the selected parent model handles only intent,
-architecture decisions, authority, final integration judgment, and the final
-answer.
-One read-only Luna xhigh Fast researcher is available for an explicitly
+micro-seams, one Luna 6 High Fast executor for a bounded implementation,
+parallel executors for disjoint ownership, or one Luna 6 xhigh Fast senior
+executor for a genuinely hard reasoning slice. Heavy sends one cohesive
+package directly to a Luna 6 High Fast executor. Only a true multi-package or
+multi-phase program receives a Luna 6 xhigh Fast `heavy_coordinator`, which
+manages bounded Luna 6 workers while the selected parent model handles only
+intent, architecture decisions, authority, final integration judgment, and
+the final answer.
+One read-only Luna 6 xhigh Fast researcher is available for an explicitly
 requested research assignment or an unusually large external-evidence package;
 ordinary documentation and API lookups stay with the current agent.
 The installer caps concurrent Codex agent threads at 10 to prevent accidental
@@ -121,6 +122,12 @@ Otherwise, the workflow uses one Luna High Fast default executor. It does not
 create a companion or closure worker. Recurring one-minute waits and
 "still working" turns are explicitly prohibited in both workflows; a quiet
 timeout leads directly to another long wait.
+
+For current parent-model selection, 6-Sol High is the normal cost-efficient
+Heavy coordinator. Reserve 6-Astra Low for exceptional ambiguity, urgency, or
+coordination difficulty where its faster, more decisive routing is worth the
+premium. The workflow itself does not switch the already selected parent
+model.
 
 The packaged skill and worker templates are canonical release artifacts.
 Lifecycle tests verify that archives and installed runtimes preserve them and

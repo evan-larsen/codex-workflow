@@ -44,7 +44,7 @@ class V2ContractTests(unittest.TestCase):
         cls.package = PackageLayout.resolve(PACKAGE_ROOT)
 
     def test_package_validation_requires_expected_workers_and_v2_metadata(self):
-        self.assertEqual(self.package.version, "2.0.9")
+        self.assertEqual(self.package.version, "2.0.10")
         self.assertEqual(
             self.package.worker_names,
             {
@@ -126,9 +126,11 @@ class V2ContractTests(unittest.TestCase):
         heavy_compact = " ".join(heavy_skill.split())
         heavy_coordination_compact = " ".join(heavy_coordination.split())
         for requirement in (
-            "Spawn exactly one `heavy_coordinator`",
+            "spawn exactly one Luna 6 High Fast `default_executor`",
+            "spawn exactly one Luna 6 xhigh Fast `heavy_coordinator`",
+            "Do not add a coordinator wrapper merely because Heavy was invoked",
             'with `fork_turns: "none"`',
-            "Luna xhigh Fast",
+            "one batched status/diff inspection",
             "`timeout_ms` of at least 600000",
             "Never use recurring 60000 ms waits",
             "Multi-turn waiting is a workflow failure",
@@ -139,6 +141,9 @@ class V2ContractTests(unittest.TestCase):
             self.assertIn(requirement, heavy_compact)
         self.assertIn("prefer 3600000 ms", heavy_coordination_compact)
         self.assertIn("A timeout is not evidence", heavy_coordination_compact)
+        self.assertIn("may not appear in `ALL_TOOLS`", heavy_coordination_compact)
+        self.assertIn("one planned terminal proof batch", heavy_coordination_compact)
+        self.assertIn("Do not run lint merely because TypeScript changed", heavy_coordination_compact)
         self.assertIn("allow_implicit_invocation: false", heavy_metadata)
         self.assertIn("Do not create Companion", coordination_compact)
         self.assertIn("one prioritized, deduplicated defect packet", coordination_compact)
@@ -232,6 +237,7 @@ class V2ContractTests(unittest.TestCase):
                 PACKAGE_ROOT / "templates" / "agents" / f"{worker}.toml"
             ).read_text(encoding="utf-8")
             text_compact = " ".join(text.split())
+            self.assertIn('model = "gpt-6-luna"', text_compact, worker)
             for requirement in requirements:
                 self.assertIn(requirement, text_compact, f"{worker}: {requirement}")
 
@@ -360,7 +366,7 @@ Decision: No additional decisions.
                 self.assertTrue(all(name == "codex_workflow" or name.startswith("codex_workflow/") for name in bundle.namelist()))
                 bundle.extractall(Path(directory) / "extracted")
             extracted = PackageLayout.resolve(Path(directory) / "extracted" / "codex_workflow")
-            self.assertEqual(extracted.version, "2.0.9")
+            self.assertEqual(extracted.version, "2.0.10")
             for source in sorted(self.package.agent_templates.glob("*.toml")):
                 archived = (
                     Path(directory)
@@ -445,7 +451,7 @@ Decision: No additional decisions.
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(package_result.returncode, 0, package_result.stdout + package_result.stderr)
-            archive = package_output / "codex_workflow-2.0.9.zip"
+            archive = package_output / "codex_workflow-2.0.10.zip"
             self.assertTrue(archive.is_file())
             self.assertTrue((package_output / "SHA256SUMS").is_file())
             fake_bin = root / "bin"

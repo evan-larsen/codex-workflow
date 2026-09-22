@@ -1,6 +1,6 @@
 ---
 name: codex-workflow-heavy
-description: Explicitly invoked long-horizon coding coordination for multi-phase or multi-surface work using one Luna xhigh Fast execution coordinator and bounded Luna workers. Use only when the user invokes $codex-workflow-heavy.
+description: Explicitly invoked long-horizon coding coordination using one Luna 6 High Fast executor for a cohesive package or one Luna 6 xhigh Fast execution coordinator for a true multi-package program. Use only when the user invokes $codex-workflow-heavy.
 metadata:
   short-description: Efficient long-horizon coding coordination
 ---
@@ -24,8 +24,8 @@ Heavy is designed for an implementation program with multiple phases,
 independent ownership surfaces, cross-layer integration, or enough sustained
 execution that the selected parent model should preserve its context for
 decisions. Duration, a large file, or the user's desire for one small subagent
-does not by itself require a large worker topology. An explicitly invoked but
-indivisible task may still use one executor.
+does not by itself require a large worker topology. Invoking Heavy does not
+force a coordinator wrapper around one cohesive implementation package.
 
 Do not recreate the retired ceremony: no automatic memory documents, companion
 agent, closure worker, default tester, documentation gate, worker statistics,
@@ -40,17 +40,26 @@ answer. It should use as few tokens and tool turns as possible.
 1. Build one compact execution capsule containing the outcome, known starting
    points, ownership boundaries, protected areas, acceptance criteria,
    authority limits, and risk-selected verification boundary.
-2. Spawn exactly one `heavy_coordinator` with `fork_turns: "none"`. Do not
-   override its packaged Luna xhigh Fast configuration.
-3. Let that coordinator own worker decomposition, implementation traffic,
-   integration, and one grouped repair wave. Do not separately supervise or
-   poll its children.
+2. Select the execution owner once:
+   - For one cohesive implementation package with one ownership surface and no
+     meaningful decomposition or integration decision, spawn exactly one Luna
+     6 High Fast `default_executor` with `fork_turns: "none"`.
+   - For a real multi-package or multi-phase program, spawn exactly one Luna 6
+     xhigh Fast `heavy_coordinator` with `fork_turns: "none"` and let it own
+     worker decomposition, implementation traffic, integration, and one
+     grouped repair wave.
+   Do not add a coordinator wrapper merely because Heavy was invoked, and do
+   not override either role's packaged model configuration.
+3. Do not separately supervise or poll the Heavy coordinator's children.
 4. Wake for a real blocker, a user scope change, a requested external or
    destructive action, or the terminal phase report. Handle a tiny final Git or
    metadata integration action directly when authorized; never wake a worker
    solely to format, stage, commit, inspect status, or report that it committed.
-5. Finish from the compact report and decisive diff evidence. Do not replay
-   large logs or rerun clear passing proof.
+5. Finish from the compact report and decisive diff evidence. Use one batched
+   status/diff inspection by default; read individual files only for a concrete
+   concern identified by the report, diff, or named critical risk. Return any
+   findings as one repair packet. Do not replay large logs or rerun clear
+   passing proof.
 
 ## Waiting is one event-driven operation
 
@@ -70,8 +79,8 @@ a concrete next unit or one grouped repair packet after a terminal report.
 
 ## Execution topology
 
-The Heavy coordinator normally uses Luna High Fast `default_executor` workers
-for disjoint implementation packages. It may use one Luna xhigh Fast
+The Heavy coordinator normally uses Luna 6 High Fast `default_executor` workers
+for disjoint implementation packages. It may use one Luna 6 xhigh Fast
 `senior_executor` for an intrinsically difficult bounded slice. An
 `investigator` is allowed only for a named uncertainty that blocks a safe
 decision and cannot be resolved inside an executor's targeted discovery.

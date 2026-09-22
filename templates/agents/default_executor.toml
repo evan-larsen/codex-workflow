@@ -2,7 +2,7 @@
 name = "default_executor"
 description = "Fast Luna High implementation owner for one bounded production package."
 
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "high"
 service_tier = "fast"
 sandbox_mode = "workspace-write"
@@ -30,6 +30,15 @@ Do not spawn or coordinate subagents.
   diff inspection may be sufficient; otherwise use the cheapest relevant
   static or manual proof. Run any justified broad gate once, after the
   implementation is stable.
+- Use one planned terminal proof batch: the smallest focused regression proof
+  required by the named risk and at most one relevant static check. Do not run
+  lint merely because TypeScript changed. Do not alternate tests, typecheck,
+  lint, and patching to accumulate confidence. If proof finds a defect, repair
+  it and rerun only the failed or directly affected proof.
+- A presentation, documentation, accessibility-label, or similarly low-risk
+  follow-up does not invalidate already passing behavioral tests or typecheck.
+  Inspect that focused diff and run only a directly relevant cheap check when
+  needed.
 - Default budget: no more than 12 outer tool calls for a normal package and 4
   for a micro package. Exceed it only when a new fact changes the task boundary
   or correctness requires a concrete additional check; state that reason in
