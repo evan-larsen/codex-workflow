@@ -33,7 +33,7 @@ python3 ~/.codex/codex_workflow/workflow.py update --project <project>
 For migration from a pre-script installation, run the incoming package's
 `workflow.py` instead of an older installed launcher.
 
-The script replaces the installed workflow skill and worker TOMLs with the
+The script replaces the installed workflow skills and worker TOMLs with the
 incoming release's fixed definitions. It preserves unrelated Codex settings,
 source backups, and every project file. The retained `--project` and
 `--legacy-local-instructions` arguments are compatibility inputs only; update
@@ -46,8 +46,9 @@ compensating transaction. A downgrade additionally requires
 Report the installed version, preserved preferences, backup location, and any failure.
 Do not describe a partial or rolled-back update as successful.
 
-An update replaces the workflow-owned global skill at
-`~/.codex/skills/codex-workflow/`. An unmarked skill at that path is unrelated
-and blocks the update. An owned legacy `codex-workflow-maintainer` skill is
-removed during migration; an unmarked legacy directory is preserved. Refresh
-or restart Codex after the update so the new skill is discovered.
+An update replaces the workflow-owned global skills at
+`~/.codex/skills/codex-workflow/` and
+`~/.codex/skills/codex-workflow-heavy/`. An unmarked skill at either path is
+unrelated and blocks the update. An owned legacy `codex-workflow-maintainer`
+skill is removed during migration; an unmarked legacy directory is preserved.
+Refresh or restart Codex after the update so the new skills are discovered.

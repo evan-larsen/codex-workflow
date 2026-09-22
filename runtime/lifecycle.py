@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from . import RUNTIME_SCHEMA_VERSION
 from .backup import append_backup_mutations
-from .layout import WORKFLOW_SKILL, USER_STATE, PackageLayout, ProjectPaths, RuntimePaths
+from .layout import WORKFLOW_SKILLS, USER_STATE, PackageLayout, ProjectPaths, RuntimePaths
 from .plan import (
     OperationPlan,
     deduplicate,
@@ -32,7 +32,7 @@ def plan_bootstrap(
         "version": package.version,
         "owned_runtime_files": sorted(owned_runtime),
         "owned_workers": sorted(package.worker_names),
-        "owned_skills": [WORKFLOW_SKILL],
+        "owned_skills": sorted(WORKFLOW_SKILLS),
     }
     mutations.append(json_mutation(runtime.runtime / USER_STATE, state))
     return OperationPlan(
@@ -123,7 +123,7 @@ def plan_update(
         "version": incoming.version,
         "owned_runtime_files": sorted(owned_runtime),
         "owned_workers": sorted(incoming.worker_names),
-        "owned_skills": [WORKFLOW_SKILL],
+        "owned_skills": sorted(WORKFLOW_SKILLS),
     }
     mutations.append(json_mutation(runtime.runtime / USER_STATE, state))
     return OperationPlan(

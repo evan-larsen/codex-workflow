@@ -1,0 +1,6 @@
+interface:
+  display_name: "Codex Workflow Heavy"
+  short_description: "Efficient long-horizon coding coordination"
+  default_prompt: "Use $codex-workflow-heavy to complete this long-horizon task through one execution coordinator with minimal parent turns."
+policy:
+  allow_implicit_invocation: false

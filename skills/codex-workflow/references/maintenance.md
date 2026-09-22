@@ -20,12 +20,13 @@ runtime replacement, or project migration. Obtain the authority required for
 each shared or external mutation.
 
 Do not write project `AGENTS.md`, personalization, state, or documentation
-during bootstrap or update. Preserve unrelated settings. Refuse to overwrite or remove an unmarked global skill.
-Only a skill carrying the codex_workflow ownership marker may be replaced or
-removed by lifecycle operations.
+during bootstrap or update. Preserve unrelated settings. Refuse to overwrite or
+remove an unmarked global skill. Only a skill carrying its expected
+codex_workflow ownership marker may be replaced or removed by lifecycle
+operations.
 
 Validate the package and run focused lifecycle tests. Installation and update
 changes require isolated temporary-runtime coverage for fresh install,
 replacement, collision refusal, owned legacy migration, and removal as
 applicable. After a global runtime change, tell the user to refresh or restart
-Codex so skill discovery reloads the instructions.
+Codex so skill discovery reloads both workflow skills and their instructions.

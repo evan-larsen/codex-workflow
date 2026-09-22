@@ -9,10 +9,12 @@ metadata:
 
 # Codex Workflow
 
-Use one adaptive workflow for the user's coherent outcome. There are no Light,
-Medium, or Heavy modes. The user's instructions take precedence over this
-skill. Keep project instructions, authorization boundaries, and unrelated user
-work intact.
+Use one adaptive workflow for the user's coherent bounded outcome. There are no
+Light, Medium, or Heavy modes inside this skill. The separate explicit
+`$codex-workflow-heavy` skill owns long-horizon, multi-phase execution through
+one dedicated execution coordinator. The user's instructions take precedence
+over this skill. Keep project instructions, authorization boundaries, and
+unrelated user work intact.
 
 Once explicitly invoked, keep this skill active for follow-ups on the same
 outcome until completion. Do not make the user invoke it again after every
@@ -185,10 +187,15 @@ public interfaces, or needs an independent tester.
 
 ## Communication and waits
 
-Briefly announce meaningful worker dispatches. After dispatch, use the longest
-event-driven wait available. Do not poll for reassurance, emit unchanged status
-updates, or wake the coordinator merely to acknowledge a report. Process all
-available reports together, make the smallest next decision, and resume work.
+Briefly announce meaningful worker dispatches. After dispatch, call
+`wait_agent` with `timeout_ms` of at least 600000 and prefer the maximum
+supported value, currently 3600000. It returns early when an agent completes,
+reports a blocker, or the user steers the task. Never use recurring 60000 ms
+waits, minute-by-minute polling, `list_agents` for reassurance, or a commentary
+message whose only purpose is to say that an agent is still working. If a long
+wait times out with no report, immediately begin another long wait without
+commentary or other model work. Process all available reports together, make
+the smallest next decision, and resume one long event-driven wait when needed.
 
 Workers do not send routine progress messages to the coordinator while
 progressing. They contact it only for a blocking decision that changes scope or
@@ -207,6 +214,10 @@ Do not grant workers Git mutation, external mutation, destructive operations,
 or broader file ownership unless the user authorized it. Existing changes are
 user-owned. Session-memory documentation remains off unless the user explicitly
 enables it.
+
+When Git mutation is authorized and the exact task-owned files are known, the
+coordinator performs formatting, staging, status inspection, and commit
+directly. Never wake or create a worker solely for Git hygiene or a commit.
 
 Finish when the requested outcome is complete and proportionate evidence
 passes. Report checks actually run, material limitations, and any required

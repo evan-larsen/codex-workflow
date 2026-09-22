@@ -2,9 +2,9 @@
 
 Portable, deterministic lifecycle tooling for installing a generic Codex
 workflow into a user runtime. The CLI slug is `codex_workflow` and
-the canonical package version is `2.0.8`.
+the canonical package version is `2.0.9`.
 
-The package owns only its runtime directory, marked worker files, global skill,
+The package owns only its runtime directory, marked worker files, global skills,
 and workflow settings. Existing unowned role files and project files are never
 overwritten. Legacy project-wrapper support remains only so removal can restore
 previously captured project instructions safely.
@@ -34,7 +34,7 @@ Run the following from the project you want to configure, changing `$Version`
 if you are installing another published release:
 
 ```powershell
-$Version = '2.0.8'
+$Version = '2.0.9'
 $BaseUrl = "https://github.com/evan-larsen/codex-workflow/releases/download/v$Version"
 $Download = Join-Path $env:TEMP "codex-workflow-$Version"
 New-Item -ItemType Directory -Force -Path $Download | Out-Null
@@ -66,7 +66,7 @@ home; the bootstrap's project argument is retained for command compatibility
 but does not modify the project. Keep the downloaded files until installation
 has completed successfully.
 
-After the initial bootstrap, invoke the global skill for lifecycle operations
+After the initial bootstrap, invoke `$codex-workflow` for lifecycle operations
 documented in
 [`update.md`](update.md),
 [`check_update.md`](check_update.md), and [`remove.md`](remove.md):
@@ -80,14 +80,21 @@ $codex-workflow remove
 Removal is destructive and requires its separate confirmation phase. Read
 [`remove.md`](remove.md) before using it.
 
-## One explicit adaptive workflow
+## Two explicit workflows, one installation
 
 Normal chats keep normal single-agent behavior. Invoke `$codex-workflow` when
-you want coordinated execution; there are no Light, Medium, or Heavy modes to
-choose between. The coordinator selects the smallest useful shape for the
-outcome: direct work for known micro-seams, one Luna High Fast executor for a
-bounded implementation, parallel executors for disjoint ownership, or one Luna
-xhigh Fast senior executor for a genuinely hard reasoning slice.
+you want bounded coordinated execution. Invoke `$codex-workflow-heavy` for a
+long-horizon, multi-phase or multi-surface implementation program. Both are
+installed by the same package and are explicit-only.
+
+The bounded workflow selects the smallest useful shape: direct work for known
+micro-seams, one Luna High Fast executor for a bounded implementation, parallel
+executors for disjoint ownership, or one Luna xhigh Fast senior executor for a
+genuinely hard reasoning slice. The Heavy workflow gives one Luna xhigh Fast
+`heavy_coordinator` the entire execution program; that coordinator manages the
+bounded Luna workers while the selected parent model handles only intent,
+architecture decisions, authority, final integration judgment, and the final
+answer.
 One read-only Luna xhigh Fast researcher is available for an explicitly
 requested research assignment or an unusually large external-evidence package;
 ordinary documentation and API lookups stay with the current agent.
@@ -103,14 +110,17 @@ The workflow optimizes the critical path. It reuses workers for related
 follow-ups, uses an investigator only when a named material uncertainty blocks
 a safe implementation decision, never pairs an investigator and executor to
 inspect the same execution path, groups tester findings into one repair packet,
-waits on lifecycle events rather than polling, avoids routine
+waits for at least ten minutes at a time (preferably the maximum one-hour
+event-driven wait) rather than polling, avoids routine
 worker-to-coordinator status traffic, and runs proportionate verification once
 the coherent change is stable. Direct workspace
 implementation is allowed only when the exact seam is already known, the change
 introduces no new behavioral contract or nontrivial stateful workflow, and it
 is expected to require one coherent patch plus at most one cheap check.
 Otherwise, the workflow uses one Luna High Fast default executor. It does not
-create a companion or closure worker.
+create a companion or closure worker. Recurring one-minute waits and
+"still working" turns are explicitly prohibited in both workflows; a quiet
+timeout leads directly to another long wait.
 
 The packaged skill and worker templates are canonical release artifacts.
 Lifecycle tests verify that archives and installed runtimes preserve them and

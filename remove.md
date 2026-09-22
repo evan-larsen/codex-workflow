@@ -26,8 +26,9 @@ plan and explicitly warn that the confirmed phase will permanently delete:
 - worker TOMLs carrying a matching `codex-workflow-worker` ownership marker;
 - every file under `~/.codex/codex_workflow/`, including source and update
   backups.
-- the workflow-owned global skill at `~/.codex/skills/codex-workflow/` and any
-  owned legacy `codex-workflow-maintainer` skill.
+- the workflow-owned global skills at `~/.codex/skills/codex-workflow/` and
+  `~/.codex/skills/codex-workflow-heavy/`, plus any owned legacy
+  `codex-workflow-maintainer` skill.
 
 Also report that project-local instructions imported into the workflow entry
 point are restored to the root `AGENTS.md`, and that workflow-owned marked

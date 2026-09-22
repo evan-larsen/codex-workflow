@@ -12,8 +12,8 @@ from .errors import ValidationError
 from .layout import (
     OWNED_SKILL_MARKERS,
     USER_STATE,
-    WORKFLOW_SKILL,
-    WORKFLOW_SKILL_OWNER,
+    WORKFLOW_SKILL_OWNERS,
+    WORKFLOW_SKILLS,
     WORKER_MARKER,
     PackageLayout,
     RuntimePaths,
@@ -74,7 +74,7 @@ def plan_runtime_files(
         owned.add(target.relative_to(runtime.runtime).as_posix())
     mutations.extend(plan_legacy_user_agents_cleanup(runtime))
     mutations.extend(plan_platform_and_workers(runtime, package=package))
-    mutations.extend(plan_workflow_skill(package, runtime))
+    mutations.extend(plan_workflow_skills(package, runtime))
     backup = runtime.runtime / ".source_backup" / package.version
     for source in sorted(package.root.rglob("*")):
         relative = source.relative_to(package.root)
@@ -94,55 +94,60 @@ def plan_runtime_files(
     return mutations, owned
 
 
-def plan_workflow_skill(package: PackageLayout, runtime: RuntimePaths) -> list[Mutation]:
-    """Install the workflow-owned coordination skill in Codex's global skill root.
+def plan_workflow_skills(package: PackageLayout, runtime: RuntimePaths) -> list[Mutation]:
+    """Install the workflow-owned skills in Codex's global skill root.
 
     An existing unmarked directory is unrelated user content and is never
     overwritten. A matching ownership marker is the only proof accepted for
     replacement during an update.
     """
 
-    source_dir = package.root / "skills" / WORKFLOW_SKILL
-    target_dir = runtime.skills / WORKFLOW_SKILL
     if runtime.skills.is_symlink() or (
         runtime.skills.exists() and not runtime.skills.is_dir()
     ):
         raise ValidationError(f"Codex skills path is not a directory: {runtime.skills}")
-    if target_dir.is_symlink() or (
-        target_dir.exists() and not target_dir.is_dir()
-    ):
-        raise ValidationError(
-            f"refusing to replace non-directory workflow skill: {target_dir}"
-        )
-    if target_dir.is_dir():
-        marker = target_dir / "SKILL.md"
-        if not marker.is_file() or WORKFLOW_SKILL_OWNER not in marker.read_text(
-            encoding="utf-8"
-        ):
-            raise ValidationError(
-                f"refusing to replace unowned global skill: {target_dir}"
-            )
 
     mutations: list[Mutation] = []
-    source_files: set[Path] = set()
-    for source in sorted(source_dir.rglob("*")):
-        if source.is_symlink() or not source.is_file():
-            continue
-        relative = source.relative_to(source_dir)
-        source_files.add(relative)
-        mutations.append(
-            Mutation(target_dir / relative, source.read_bytes())
-        )
-    if not mutations:
-        raise ValidationError("package workflow skill has no files")
-    if target_dir.is_dir():
-        for target in sorted(target_dir.rglob("*")):
-            if target.is_symlink():
+    for skill_name, owner_marker in sorted(WORKFLOW_SKILL_OWNERS.items()):
+        source_dir = package.root / "skills" / skill_name
+        target_dir = runtime.skills / skill_name
+        if target_dir.is_symlink() or (
+            target_dir.exists() and not target_dir.is_dir()
+        ):
+            raise ValidationError(
+                f"refusing to replace non-directory workflow skill: {target_dir}"
+            )
+        if target_dir.is_dir():
+            marker = target_dir / "SKILL.md"
+            if not marker.is_file() or owner_marker not in marker.read_text(
+                encoding="utf-8"
+            ):
                 raise ValidationError(
-                    f"refusing to replace symlink in global skill: {target}"
+                    f"refusing to replace unowned global skill: {target_dir}"
                 )
-            if target.is_file() and target.relative_to(target_dir) not in source_files:
-                mutations.append(Mutation(target, None))
+
+        skill_mutations: list[Mutation] = []
+        source_files: set[Path] = set()
+        for source in sorted(source_dir.rglob("*")):
+            if source.is_symlink() or not source.is_file():
+                continue
+            relative = source.relative_to(source_dir)
+            source_files.add(relative)
+            skill_mutations.append(Mutation(target_dir / relative, source.read_bytes()))
+        if not skill_mutations:
+            raise ValidationError(f"package workflow skill has no files: {skill_name}")
+        mutations.extend(skill_mutations)
+        if target_dir.is_dir():
+            for target in sorted(target_dir.rglob("*")):
+                if target.is_symlink():
+                    raise ValidationError(
+                        f"refusing to replace symlink in global skill: {target}"
+                    )
+                if (
+                    target.is_file()
+                    and target.relative_to(target_dir) not in source_files
+                ):
+                    mutations.append(Mutation(target, None))
     return mutations
 
 
@@ -154,7 +159,7 @@ def plan_obsolete_owned_skills(
     mutations: list[Mutation] = []
     cleanup_dirs: list[Path] = []
     warnings: list[str] = []
-    candidates = (previous_owned | set(OWNED_SKILL_MARKERS)) - {WORKFLOW_SKILL}
+    candidates = (previous_owned | set(OWNED_SKILL_MARKERS)) - set(WORKFLOW_SKILLS)
     for name in sorted(candidates):
         marker_text = OWNED_SKILL_MARKERS.get(name)
         if marker_text is None:

@@ -18,9 +18,12 @@ sys.path.insert(0, str(PACKAGE_ROOT))
 
 from runtime.errors import ValidationError
 from runtime.layout import (
+    HEAVY_WORKFLOW_SKILL,
+    HEAVY_WORKFLOW_SKILL_OWNER,
     LEGACY_SKILL_MARKERS,
     WORKFLOW_SKILL,
     WORKFLOW_SKILL_OWNER,
+    WORKFLOW_SKILLS,
     PackageLayout,
     ProjectPaths,
     RuntimePaths,
@@ -41,12 +44,13 @@ class V2ContractTests(unittest.TestCase):
         cls.package = PackageLayout.resolve(PACKAGE_ROOT)
 
     def test_package_validation_requires_expected_workers_and_v2_metadata(self):
-        self.assertEqual(self.package.version, "2.0.8")
+        self.assertEqual(self.package.version, "2.0.9")
         self.assertEqual(
             self.package.worker_names,
             {
                 "auditor",
                 "default_executor",
+                "heavy_coordinator",
                 "investigator",
                 "researcher",
                 "senior_executor",
@@ -55,7 +59,7 @@ class V2ContractTests(unittest.TestCase):
         )
         self.package.validate()
 
-    def test_single_skill_and_worker_guardrails_are_source_contracts(self):
+    def test_workflow_skill_and_worker_guardrails_are_source_contracts(self):
         skill = (PACKAGE_ROOT / "skills" / WORKFLOW_SKILL / "SKILL.md").read_text(
             encoding="utf-8"
         )
@@ -64,6 +68,23 @@ class V2ContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         metadata = (
             PACKAGE_ROOT / "skills" / WORKFLOW_SKILL / "agents" / "openai.yaml"
+        ).read_text(encoding="utf-8")
+        heavy_skill = (
+            PACKAGE_ROOT / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        heavy_coordination = (
+            PACKAGE_ROOT
+            / "skills"
+            / HEAVY_WORKFLOW_SKILL
+            / "references"
+            / "heavy-coordination.md"
+        ).read_text(encoding="utf-8")
+        heavy_metadata = (
+            PACKAGE_ROOT
+            / "skills"
+            / HEAVY_WORKFLOW_SKILL
+            / "agents"
+            / "openai.yaml"
         ).read_text(encoding="utf-8")
         project = (PACKAGE_ROOT / "templates" / "AGENTS.md").read_text(
             encoding="utf-8"
@@ -97,8 +118,28 @@ class V2ContractTests(unittest.TestCase):
             "at least three independent questions",
             "at least eight substantive source retrievals",
             "never qualifies automatically",
+            "`timeout_ms` of at least 600000",
+            "Never use recurring 60000 ms waits",
+            "Never wake or create a worker solely for Git hygiene or a commit",
         ):
             self.assertIn(requirement, skill_compact)
+        heavy_compact = " ".join(heavy_skill.split())
+        heavy_coordination_compact = " ".join(heavy_coordination.split())
+        for requirement in (
+            "Spawn exactly one `heavy_coordinator`",
+            'with `fork_turns: "none"`',
+            "Luna xhigh Fast",
+            "`timeout_ms` of at least 600000",
+            "Never use recurring 60000 ms waits",
+            "Multi-turn waiting is a workflow failure",
+            "never wake a worker solely to format, stage, commit",
+            "one grouped repair wave",
+            "no automatic memory documents",
+        ):
+            self.assertIn(requirement, heavy_compact)
+        self.assertIn("prefer 3600000 ms", heavy_coordination_compact)
+        self.assertIn("A timeout is not evidence", heavy_coordination_compact)
+        self.assertIn("allow_implicit_invocation: false", heavy_metadata)
         self.assertIn("Do not create Companion", coordination_compact)
         self.assertIn("one prioritized, deduplicated defect packet", coordination_compact)
         self.assertIn("Workers do not send routine progress updates", coordination_compact)
@@ -136,6 +177,15 @@ class V2ContractTests(unittest.TestCase):
                 "Verify the coherent implementation once",
                 "Tests are regression protection, not a default task or a diagnostic tool",
                 "Do not send routine progress or status messages to the coordinator",
+            ),
+            "heavy_coordinator": (
+                'model_reasoning_effort = "xhigh"',
+                'service_tier = "fast"',
+                "You may spawn and coordinate subagents",
+                "`timeout_ms` of at least 600000",
+                "Never use recurring 60000 ms waits",
+                "without sending the parent a status-only message",
+                "one grouped repair packet",
             ),
             "investigator": (
                 'service_tier = "fast"',
@@ -310,7 +360,7 @@ Decision: No additional decisions.
                 self.assertTrue(all(name == "codex_workflow" or name.startswith("codex_workflow/") for name in bundle.namelist()))
                 bundle.extractall(Path(directory) / "extracted")
             extracted = PackageLayout.resolve(Path(directory) / "extracted" / "codex_workflow")
-            self.assertEqual(extracted.version, "2.0.8")
+            self.assertEqual(extracted.version, "2.0.9")
             for source in sorted(self.package.agent_templates.glob("*.toml")):
                 archived = (
                     Path(directory)
@@ -321,17 +371,22 @@ Decision: No additional decisions.
                     / source.name
                 )
                 self.assertEqual(archived.read_bytes(), source.read_bytes(), source.name)
-            skill_root = PACKAGE_ROOT / "skills" / WORKFLOW_SKILL
-            for source in sorted(path for path in skill_root.rglob("*") if path.is_file()):
-                archived = (
-                    Path(directory)
-                    / "extracted"
-                    / "codex_workflow"
-                    / "skills"
-                    / WORKFLOW_SKILL
-                    / source.relative_to(skill_root)
-                )
-                self.assertEqual(archived.read_bytes(), source.read_bytes(), str(source))
+            for skill_name in WORKFLOW_SKILLS:
+                skill_root = PACKAGE_ROOT / "skills" / skill_name
+                for source in sorted(
+                    path for path in skill_root.rglob("*") if path.is_file()
+                ):
+                    archived = (
+                        Path(directory)
+                        / "extracted"
+                        / "codex_workflow"
+                        / "skills"
+                        / skill_name
+                        / source.relative_to(skill_root)
+                    )
+                    self.assertEqual(
+                        archived.read_bytes(), source.read_bytes(), str(source)
+                    )
 
     def test_bootstrap_installs_exact_packaged_worker_templates(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -390,7 +445,7 @@ Decision: No additional decisions.
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(package_result.returncode, 0, package_result.stdout + package_result.stderr)
-            archive = package_output / "codex_workflow-2.0.8.zip"
+            archive = package_output / "codex_workflow-2.0.9.zip"
             self.assertTrue(archive.is_file())
             self.assertTrue((package_output / "SHA256SUMS").is_file())
             fake_bin = root / "bin"
@@ -438,7 +493,7 @@ Decision: No additional decisions.
             self.assertFalse(stale_git_file.exists())
             self.assertFalse(stale_git_file.parent.exists())
 
-    def test_bootstrap_installs_owned_global_workflow_skill(self):
+    def test_bootstrap_installs_owned_global_workflow_skills(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory) / "codex-home"
             project = ProjectPaths(Path(directory) / "project")
@@ -449,21 +504,40 @@ Decision: No additional decisions.
             self.assertTrue(
                 (home / "skills" / WORKFLOW_SKILL / "references" / "coordination.md").is_file()
             )
+            heavy_skill = home / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md"
+            self.assertTrue(heavy_skill.is_file())
+            self.assertIn(
+                HEAVY_WORKFLOW_SKILL_OWNER,
+                heavy_skill.read_text(encoding="utf-8"),
+            )
+            self.assertTrue(
+                (
+                    home
+                    / "skills"
+                    / HEAVY_WORKFLOW_SKILL
+                    / "references"
+                    / "heavy-coordination.md"
+                ).is_file()
+            )
             state = json.loads((home / "codex_workflow" / "install_state.json").read_text(encoding="utf-8"))
-            self.assertEqual(state["owned_skills"], [WORKFLOW_SKILL])
+            self.assertEqual(state["owned_skills"], sorted(WORKFLOW_SKILLS))
 
     def test_unowned_global_skill_collision_is_rejected_without_mutation(self):
-        with tempfile.TemporaryDirectory() as directory:
-            home = Path(directory) / "codex-home"
-            project = ProjectPaths(Path(directory) / "project")
-            skill = home / "skills" / WORKFLOW_SKILL
-            skill.mkdir(parents=True)
-            marker = skill / "SKILL.md"
-            marker.write_text("---\nname: unrelated\n---\n", encoding="utf-8")
-            with self.assertRaises(ValidationError):
-                plan_bootstrap(self.package, RuntimePaths(home), project)
-            self.assertEqual(marker.read_text(encoding="utf-8"), "---\nname: unrelated\n---\n")
-            self.assertFalse((home / "codex_workflow").exists())
+        for skill_name in WORKFLOW_SKILLS:
+            with self.subTest(skill_name=skill_name), tempfile.TemporaryDirectory() as directory:
+                home = Path(directory) / "codex-home"
+                project = ProjectPaths(Path(directory) / "project")
+                skill = home / "skills" / skill_name
+                skill.mkdir(parents=True)
+                marker = skill / "SKILL.md"
+                marker.write_text("---\nname: unrelated\n---\n", encoding="utf-8")
+                with self.assertRaises(ValidationError):
+                    plan_bootstrap(self.package, RuntimePaths(home), project)
+                self.assertEqual(
+                    marker.read_text(encoding="utf-8"),
+                    "---\nname: unrelated\n---\n",
+                )
+                self.assertFalse((home / "codex_workflow").exists())
 
     def test_update_replaces_owned_global_skill(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -474,17 +548,41 @@ Decision: No additional decisions.
             plan_bootstrap(self.package, runtime, project).apply()
             incoming_root = root / "incoming"
             shutil.copytree(PACKAGE_ROOT, incoming_root)
-            incoming_skill = incoming_root / "skills" / WORKFLOW_SKILL / "SKILL.md"
+            incoming_skill = incoming_root / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md"
             incoming_skill.write_text(
                 incoming_skill.read_text(encoding="utf-8") + "\nUpdated test content.\n",
                 encoding="utf-8",
             )
-            stale = home / "skills" / WORKFLOW_SKILL / "references" / "obsolete.md"
+            stale = home / "skills" / HEAVY_WORKFLOW_SKILL / "references" / "obsolete.md"
             stale.write_text("obsolete\n", encoding="utf-8")
             incoming = PackageLayout.resolve(incoming_root)
             plan_update(incoming, runtime, project).apply()
-            self.assertIn("Updated test content.", (home / "skills" / WORKFLOW_SKILL / "SKILL.md").read_text(encoding="utf-8"))
+            self.assertIn("Updated test content.", (home / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md").read_text(encoding="utf-8"))
             self.assertFalse(stale.exists())
+
+    def test_update_adds_heavy_skill_to_previous_single_skill_install(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "codex-home"
+            project = ProjectPaths(root / "project")
+            runtime = RuntimePaths(home)
+            plan_bootstrap(self.package, runtime, project).apply()
+            shutil.rmtree(home / "skills" / HEAVY_WORKFLOW_SKILL)
+            state_path = home / "codex_workflow" / "install_state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["owned_skills"] = [WORKFLOW_SKILL]
+            state_path.write_text(json.dumps(state) + "\n", encoding="utf-8")
+
+            plan_update(self.package, runtime, project).apply()
+
+            heavy_skill = home / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md"
+            self.assertTrue(heavy_skill.is_file())
+            self.assertIn(
+                HEAVY_WORKFLOW_SKILL_OWNER,
+                heavy_skill.read_text(encoding="utf-8"),
+            )
+            updated_state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated_state["owned_skills"], sorted(WORKFLOW_SKILLS))
 
     def test_update_migrates_owned_legacy_skill(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -511,6 +609,7 @@ Decision: No additional decisions.
             self.assertFalse(legacy.exists())
             self.assertFalse(obsolete_worker.exists())
             self.assertTrue((home / "skills" / WORKFLOW_SKILL / "SKILL.md").is_file())
+            self.assertTrue((home / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md").is_file())
 
     def test_remove_deletes_owned_skill_but_preserves_unowned_skill(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -523,7 +622,8 @@ Decision: No additional decisions.
             unowned.mkdir(parents=True)
             (unowned / "SKILL.md").write_text("---\nname: unrelated\n---\n", encoding="utf-8")
             plan_remove(runtime, project).apply()
-            self.assertFalse((home / "skills" / WORKFLOW_SKILL).exists())
+            for skill_name in WORKFLOW_SKILLS:
+                self.assertFalse((home / "skills" / skill_name).exists())
             self.assertTrue((unowned / "SKILL.md").is_file())
 
 

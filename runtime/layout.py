@@ -33,15 +33,25 @@ PROJECT_STATE = "state.json"
 USER_STATE = "install_state.json"
 WORKFLOW_SKILL = "codex-workflow"
 WORKFLOW_SKILL_OWNER = "<!-- codex-workflow-skill-owner: codex_workflow -->"
+HEAVY_WORKFLOW_SKILL = "codex-workflow-heavy"
+HEAVY_WORKFLOW_SKILL_OWNER = (
+    "<!-- codex-workflow-heavy-skill-owner: codex_workflow -->"
+)
+WORKFLOW_SKILL_OWNERS = {
+    WORKFLOW_SKILL: WORKFLOW_SKILL_OWNER,
+    HEAVY_WORKFLOW_SKILL: HEAVY_WORKFLOW_SKILL_OWNER,
+}
+WORKFLOW_SKILLS = frozenset(WORKFLOW_SKILL_OWNERS)
 LEGACY_SKILL_MARKERS = {
     "codex-workflow-maintainer": (
         "<!-- codex-workflow-maintainer-owner: codex_workflow -->"
     ),
 }
-OWNED_SKILL_MARKERS = {WORKFLOW_SKILL: WORKFLOW_SKILL_OWNER, **LEGACY_SKILL_MARKERS}
+OWNED_SKILL_MARKERS = {**WORKFLOW_SKILL_OWNERS, **LEGACY_SKILL_MARKERS}
 BUILTIN_WORKERS = frozenset(
     {
         "default_executor",
+        "heavy_coordinator",
         "senior_executor",
         "tester",
         "investigator",
@@ -98,26 +108,38 @@ class PackageLayout:
         ):
             raise ValidationError(f"invalid package VERSION: {version!r}")
         if not allow_legacy:
-            skill_dir = self.root / "skills" / WORKFLOW_SKILL
-            skill = skill_dir / "SKILL.md"
-            if not skill.is_file():
-                raise ValidationError("package workflow skill is missing")
-            if WORKFLOW_SKILL_OWNER not in skill.read_text(encoding="utf-8"):
-                raise ValidationError("package workflow skill ownership marker is missing")
-            if not (skill_dir / "agents" / "openai.yaml").is_file():
-                raise ValidationError("package workflow skill metadata is missing")
             required_skill_references = {
-                "coordination.md",
-                "maintenance.md",
-                "verification.md",
+                WORKFLOW_SKILL: {
+                    "coordination.md",
+                    "maintenance.md",
+                    "verification.md",
+                },
+                HEAVY_WORKFLOW_SKILL: {"heavy-coordination.md"},
             }
-            present_skill_references = {
-                path.name
-                for path in (skill_dir / "references").glob("*.md")
-                if path.is_file()
-            }
-            if not required_skill_references.issubset(present_skill_references):
-                raise ValidationError("package workflow skill references are incomplete")
+            for skill_name, owner_marker in WORKFLOW_SKILL_OWNERS.items():
+                skill_dir = self.root / "skills" / skill_name
+                skill = skill_dir / "SKILL.md"
+                if not skill.is_file():
+                    raise ValidationError(f"package workflow skill is missing: {skill_name}")
+                if owner_marker not in skill.read_text(encoding="utf-8"):
+                    raise ValidationError(
+                        f"package workflow skill ownership marker is missing: {skill_name}"
+                    )
+                if not (skill_dir / "agents" / "openai.yaml").is_file():
+                    raise ValidationError(
+                        f"package workflow skill metadata is missing: {skill_name}"
+                    )
+                present_skill_references = {
+                    path.name
+                    for path in (skill_dir / "references").glob("*.md")
+                    if path.is_file()
+                }
+                if not required_skill_references[skill_name].issubset(
+                    present_skill_references
+                ):
+                    raise ValidationError(
+                        f"package workflow skill references are incomplete: {skill_name}"
+                    )
             required = [
                 "workflow.py",
                 "bootstrap.md",
