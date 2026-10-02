@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Workflow Watch Repair"
+  short_description: "Watch incident repair coordination"
+  default_prompt: "Use $codex-workflow-watch-repair to handle this incident under the configured standing delegation and report its repair PR to Onyx."
+
+policy:
+  allow_implicit_invocation: true

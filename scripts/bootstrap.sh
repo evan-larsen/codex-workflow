@@ -20,7 +20,7 @@ expected="$(awk -v file="$(basename "$archive")" '$2==file || $2=="*"file {print
 actual="$(sha256sum "$archive" | awk '{print tolower($1)}')"
 [[ -n "$expected" && "$expected" == "$actual" ]] || { echo 'release ZIP checksum mismatch or missing entry' >&2; exit 1; }
 temp="$(mktemp -d)"
-cleanup() { rm -rf "$temp"; }
+cleanup() { rm -rf -- "$temp"; }
 trap cleanup EXIT
 unzip -q "$archive" -d "$temp"
 [[ -d "$temp/codex_workflow" ]] || { echo 'archive lacks codex_workflow root' >&2; exit 1; }
@@ -31,4 +31,4 @@ workflow="$temp/codex_workflow/workflow.py"
 "$python_cmd" "$workflow" validate --package-root "$temp/codex_workflow" --json
 args=("$workflow" bootstrap --package-root "$temp/codex_workflow" --project "$project")
 [[ -n "$codex_home" ]] && args+=(--codex-home "$codex_home")
-exec "$python_cmd" "${args[@]}"
+"$python_cmd" "${args[@]}"

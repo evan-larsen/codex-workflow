@@ -29,4 +29,4 @@ Validate the package and run focused lifecycle tests. Installation and update
 changes require isolated temporary-runtime coverage for fresh install,
 replacement, collision refusal, owned legacy migration, and removal as
 applicable. After a global runtime change, tell the user to refresh or restart
-Codex so skill discovery reloads both workflow skills and their instructions.
+Codex so skill discovery reloads all packaged workflow skills and their instructions.

@@ -31,34 +31,28 @@ def is_project_owned(text: str) -> bool:
 WORKER_MARKER = re.compile(r"^# codex-workflow-worker: ([A-Za-z0-9_-]+)$", re.MULTILINE)
 PROJECT_STATE = "state.json"
 USER_STATE = "install_state.json"
-WORKFLOW_SKILL = "codex-workflow"
-WORKFLOW_SKILL_OWNER = "<!-- codex-workflow-skill-owner: codex_workflow -->"
-HEAVY_WORKFLOW_SKILL = "codex-workflow-heavy"
-HEAVY_WORKFLOW_SKILL_OWNER = (
-    "<!-- codex-workflow-heavy-skill-owner: codex_workflow -->"
-)
+SOL_WORKFLOW_SKILL = "codex-workflow-sol"
+SOL_WORKFLOW_SKILL_OWNER = "<!-- codex-workflow-sol-skill-owner: codex_workflow -->"
+LUNA_WORKFLOW_SKILL = "codex-workflow-luna"
+LUNA_WORKFLOW_SKILL_OWNER = "<!-- codex-workflow-luna-skill-owner: codex_workflow -->"
+WATCH_REPAIR_SKILL = "codex-workflow-watch-repair"
+WATCH_REPAIR_SKILL_OWNER = "<!-- codex-workflow-watch-repair-skill-owner: codex_workflow -->"
 WORKFLOW_SKILL_OWNERS = {
-    WORKFLOW_SKILL: WORKFLOW_SKILL_OWNER,
-    HEAVY_WORKFLOW_SKILL: HEAVY_WORKFLOW_SKILL_OWNER,
+    SOL_WORKFLOW_SKILL: SOL_WORKFLOW_SKILL_OWNER,
+    LUNA_WORKFLOW_SKILL: LUNA_WORKFLOW_SKILL_OWNER,
+    WATCH_REPAIR_SKILL: WATCH_REPAIR_SKILL_OWNER,
 }
 WORKFLOW_SKILLS = frozenset(WORKFLOW_SKILL_OWNERS)
 LEGACY_SKILL_MARKERS = {
-    "codex-workflow-maintainer": (
-        "<!-- codex-workflow-maintainer-owner: codex_workflow -->"
-    ),
+    "codex-workflow": "<!-- codex-workflow-skill-owner: codex_workflow -->",
+    "codex-workflow-heavy": "<!-- codex-workflow-heavy-skill-owner: codex_workflow -->",
+    "codex-workflow-maintainer": "<!-- codex-workflow-maintainer-owner: codex_workflow -->",
 }
 OWNED_SKILL_MARKERS = {**WORKFLOW_SKILL_OWNERS, **LEGACY_SKILL_MARKERS}
-BUILTIN_WORKERS = frozenset(
-    {
-        "default_executor",
-        "heavy_coordinator",
-        "senior_executor",
-        "tester",
-        "investigator",
-        "researcher",
-        "auditor",
-    }
-)
+OBSOLETE_WORKERS = frozenset({"heavy_coordinator", "senior_executor"})
+BUILTIN_WORKERS = frozenset({
+    "default_executor", "luna_executor", "tester", "investigator", "researcher", "auditor",
+})
 
 
 @dataclass(frozen=True)
@@ -108,14 +102,19 @@ class PackageLayout:
         ):
             raise ValidationError(f"invalid package VERSION: {version!r}")
         if not allow_legacy:
+            present_skills = {
+                path.name for path in (self.root / "skills").iterdir() if path.is_dir()
+            } if (self.root / "skills").is_dir() else set()
+            if present_skills != WORKFLOW_SKILLS:
+                raise ValidationError(
+                    f"package must contain exactly the workflow skills: {sorted(WORKFLOW_SKILLS)}"
+                )
             required_skill_references = {
-                WORKFLOW_SKILL: {
-                    "coordination.md",
-                    "maintenance.md",
-                    "verification.md",
-                },
-                HEAVY_WORKFLOW_SKILL: {"heavy-coordination.md"},
+                name: {"maintenance.md"} for name in WORKFLOW_SKILLS
             }
+            required_skill_references[WATCH_REPAIR_SKILL].update({
+                "intake-and-authority.md", "repair-and-pr.md", "tether-policy.md",
+            })
             for skill_name, owner_marker in WORKFLOW_SKILL_OWNERS.items():
                 skill_dir = self.root / "skills" / skill_name
                 skill = skill_dir / "SKILL.md"

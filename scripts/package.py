@@ -17,7 +17,7 @@ def package_files(root: Path) -> list[Path]:
             path
             for path in root.rglob("*")
             if path.is_file()
-            and not any(part in EXCLUDED_DIRS for part in path.parts)
+            and not any(part in EXCLUDED_DIRS for part in path.relative_to(root).parts)
             and path.suffix != ".pyc"
         ),
         key=lambda path: path.relative_to(root).as_posix(),
@@ -41,8 +41,14 @@ def build(root: Path, output: Path) -> tuple[Path, Path]:
             info.date_time = (1980, 1, 1, 0, 0, 0)
             info.compress_type = zipfile.ZIP_DEFLATED
             mode = 0o755 if source.suffix == ".sh" else 0o644
+            # Unix metadata is required even when building on Windows, so unzip
+            # restores executable shell entrypoints on Linux and macOS.
+            info.create_system = 3
             info.external_attr = (0o100000 | mode) << 16
-            bundle.writestr(info, source.read_bytes())
+            content = source.read_bytes()
+            if source.suffix == ".sh":
+                content = content.replace(b"\r\n", b"\n")
+            bundle.writestr(info, content)
     checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
     sums = output / "SHA256SUMS"
     sums.write_text(f"{checksum}  {archive.name}\n", encoding="ascii")

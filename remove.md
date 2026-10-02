@@ -2,7 +2,7 @@
 
 Run this procedure only for the explicit skill invocation:
 
-    $codex-workflow remove
+    $codex-workflow-sol remove
 
 This is a destructive operation. It uses two phases: the first phase is a
 read-only plan, and the second phase is allowed only after one clear second
@@ -26,9 +26,10 @@ plan and explicitly warn that the confirmed phase will permanently delete:
 - worker TOMLs carrying a matching `codex-workflow-worker` ownership marker;
 - every file under `~/.codex/codex_workflow/`, including source and update
   backups.
-- the workflow-owned global skills at `~/.codex/skills/codex-workflow/` and
-  `~/.codex/skills/codex-workflow-heavy/`, plus any owned legacy
-  `codex-workflow-maintainer` skill.
+- the workflow-owned global skills at `~/.codex/skills/codex-workflow-sol/`,
+  `~/.codex/skills/codex-workflow-luna/`, and
+  `~/.codex/skills/codex-workflow-watch-repair/`, plus any owned legacy
+  `codex-workflow`, `codex-workflow-heavy`, or `codex-workflow-maintainer` skill.
 
 Also report that project-local instructions imported into the workflow entry
 point are restored to the root `AGENTS.md`, and that workflow-owned marked

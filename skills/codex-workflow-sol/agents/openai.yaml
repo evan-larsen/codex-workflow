@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Workflow Sol"
+  short_description: "Autonomous Sol package coordination"
+  default_prompt: "Use $codex-workflow-sol to complete this coding outcome with proportionate coordination and verification."
+
+policy:
+  allow_implicit_invocation: false

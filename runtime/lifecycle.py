@@ -27,6 +27,8 @@ def plan_bootstrap(
     package: PackageLayout, runtime: RuntimePaths, project: ProjectPaths
 ) -> OperationPlan:
     mutations, owned_runtime = plan_runtime_files(package, runtime)
+    obsolete, obsolete_dirs, warnings = plan_obsolete_owned_skills(runtime, set())
+    mutations.extend(obsolete)
     state = {
         "schema_version": RUNTIME_SCHEMA_VERSION,
         "version": package.version,
@@ -38,9 +40,10 @@ def plan_bootstrap(
     return OperationPlan(
         "bootstrap",
         deduplicate(mutations),
-        [],
+        warnings,
         [],
         {"version": package.version},
+        cleanup_dirs=obsolete_dirs,
     )
 
 

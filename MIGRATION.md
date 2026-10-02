@@ -1,16 +1,21 @@
-# v1 to v2 migration
+# User-runtime and legacy project migration
 
-The v2 runtime accepts the v1 project marker (`viettran-edgeAI/codex_workflow`)
-only to make an explicit one-time update safe. It never emits that marker.
+Version 2.2.0 updates older user-level installations to the Sol, Luna and watch
+repair skills and their fixed role templates. Bootstrap/update preserve every
+project file; --project and --legacy-local-instructions are retained compatibility
+inputs and do not rewrite project AGENTS.md or initialize session memory.
 
-1. Build or obtain a verified v2 package and run `check-compatibility` and
-   `validate` before changing a project.
-2. If the old project entry contains only the recognized managed template,
-   run `workflow.py update --source <package> --project <project>`.
-3. If it contains local instructions merged into the old entry, extract and
-   review only those instructions into a temporary text file, then pass
-   `--legacy-local-instructions <file>` to the same update command.
+Obtain the v2.2.0 archive and SHA256SUMS, verify the checksum, extract the package
+and run its workflow.py validate before installation. For an older runtime, run
+the incoming workflow.py update --source <extracted-package> --codex-home <home>.
+The CLI rejects equal versions and requires --allow-downgrade for a downgrade.
+Updates back up the installed runtime, replace marked owned skills/roles, retire
+marked legacy skills/roles and preserve unrelated settings and unmarked content.
+An unmarked incoming skill/role collision blocks mutation; do not delete it to
+force an installation.
 
-The reviewed text is rejected if it contains reserved workflow markers. The
-result uses the canonical v2 marker and protected project-local region. A
-failed validation makes no live mutation.
+Legacy v1 project wrappers and their repository-qualified markers remain
+recognized by the explicit remove lifecycle so captured local instructions can
+be restored. Removal has a read-only plan and separate confirmed phase; inspect
+the plan before authorizing it. It preserves project memory documents and
+unrelated instructions. No automatic project migration is performed on update.

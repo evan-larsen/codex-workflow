@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Workflow Luna"
+  short_description: "Fast user-steered Luna implementation"
+  default_prompt: "Use $codex-workflow-luna to complete this coding outcome with proportionate coordination and verification."
+
+policy:
+  allow_implicit_invocation: false

@@ -2,7 +2,7 @@
 
 Supported skill invocation:
 
-    $codex-workflow update
+    $codex-workflow-sol update
 
 Codex 0.147.0 or newer and Python 3.11 or newer are required. Before downloading
 or mutating anything, run:
@@ -46,9 +46,13 @@ compensating transaction. A downgrade additionally requires
 Report the installed version, preserved preferences, backup location, and any failure.
 Do not describe a partial or rolled-back update as successful.
 
-An update replaces the workflow-owned global skills at
-`~/.codex/skills/codex-workflow/` and
-`~/.codex/skills/codex-workflow-heavy/`. An unmarked skill at either path is
-unrelated and blocks the update. An owned legacy `codex-workflow-maintainer`
-skill is removed during migration; an unmarked legacy directory is preserved.
-Refresh or restart Codex after the update so the new skills are discovered.
+An update installs exactly three workflow-owned global skills:
+`~/.codex/skills/codex-workflow-sol/`,
+`~/.codex/skills/codex-workflow-luna/`, and
+`~/.codex/skills/codex-workflow-watch-repair/`. An unmarked skill at any target blocks
+the update before mutation. Marked legacy `codex-workflow`,
+`codex-workflow-heavy`, and `codex-workflow-maintainer` skills are removed;
+unmarked legacy directories are preserved. Marked obsolete `heavy_coordinator`
+and `senior_executor` workers are retired, preserving unowned role names.
+Old package layouts and schema-1 installation manifests remain migration inputs.
+Refresh or restart Codex after updating so skill and role discovery reloads.

@@ -2,7 +2,7 @@
 
 Portable, deterministic lifecycle tooling for installing a generic Codex
 workflow into a user runtime. The CLI slug is `codex_workflow` and
-the canonical package version is `2.0.10`.
+the canonical package version is `2.2.0`.
 
 The package owns only its runtime directory, marked worker files, global skills,
 and workflow settings. Existing unowned role files and project files are never
@@ -14,10 +14,10 @@ This public repository is maintained at
 
 ## Support status and prerequisites
 
-The initial public release has been verified in an isolated Windows
-PowerShell setup. macOS and Linux packaging and bootstrap paths are present,
-but have not yet been independently verified; treat those platforms as
-experimental until tested.
+The installer has isolated Windows PowerShell coverage and Ubuntu 24.04
+container coverage with a simulated Codex version command. This proves package
+installation and lifecycle behavior, not real Codex role execution on your VM.
+macOS bootstrap execution has not been verified.
 
 For the supported Windows path, install Codex 0.147.0 or newer and Python
 3.11 or newer. PowerShell 5.1+ (or PowerShell 7+) and permission to write the
@@ -26,15 +26,15 @@ Codex version and validates the package before making any changes.
 
 ## Download, review, and bootstrap on Windows
 
-Download the release archive and its checksum as separate files, inspect the
+For a published release, download the archive and its checksum as separate files, inspect the
 checksum and archive contents, verify the SHA-256 value, and only then run the
 bootstrap script. This deliberately avoids executing a blind network pipe.
 
-Run the following from the project you want to configure, changing `$Version`
-if you are installing another published release:
+Run the following from the project you want to configure, setting `$Version`
+to the published release you want to install:
 
 ```powershell
-$Version = '2.0.10'
+$Version = '2.2.0'
 $BaseUrl = "https://github.com/evan-larsen/codex-workflow/releases/download/v$Version"
 $Download = Join-Path $env:TEMP "codex-workflow-$Version"
 New-Item -ItemType Directory -Force -Path $Download | Out-Null
@@ -66,68 +66,115 @@ home; the bootstrap's project argument is retained for command compatibility
 but does not modify the project. Keep the downloaded files until installation
 has completed successfully.
 
-After the initial bootstrap, invoke `$codex-workflow` for lifecycle operations
+After the initial bootstrap, invoke `$codex-workflow-sol` for lifecycle operations
 documented in
 [`update.md`](update.md),
 [`check_update.md`](check_update.md), and [`remove.md`](remove.md):
 
 ```text
-$codex-workflow check for updates
-$codex-workflow update
-$codex-workflow remove
+$codex-workflow-sol check for updates
+$codex-workflow-sol update
+$codex-workflow-sol remove
 ```
 
 Removal is destructive and requires its separate confirmation phase. Read
 [`remove.md`](remove.md) before using it.
 
-## Two explicit workflows, one installation
+## Install the provided archive on an Ubuntu VM
 
-Normal chats keep normal single-agent behavior. Invoke `$codex-workflow` when
-you want bounded coordinated execution. Invoke `$codex-workflow-heavy` for a
-long-horizon, multi-phase or multi-surface implementation program. Both are
-installed by the same package and are explicit-only.
+Copy the reviewed `codex_workflow-2.2.0.zip` and its accompanying `SHA256SUMS`
+to the same VM directory, or download both assets from the
+[v2.2.0 release](https://github.com/evan-larsen/codex-workflow/releases/tag/v2.2.0).
+Use this bootstrap route for a fresh Codex home.
 
-The bounded workflow selects the smallest useful shape: direct work for known
-micro-seams, one Luna 6 High Fast executor for a bounded implementation,
-parallel executors for disjoint ownership, or one Luna 6 xhigh Fast senior
-executor for a genuinely hard reasoning slice. Heavy sends one cohesive
-package directly to a Luna 6 High Fast executor. Only a true multi-package or
-multi-phase program receives a Luna 6 xhigh Fast `heavy_coordinator`, which
-manages bounded Luna 6 workers while the selected parent model handles only
-intent, architecture decisions, authority, final integration judgment, and
-the final answer.
-One read-only Luna 6 xhigh Fast researcher is available for an explicitly
-requested research assignment or an unusually large external-evidence package;
-ordinary documentation and API lookups stay with the current agent.
-The installer caps concurrent Codex agent threads at 10 to prevent accidental
-fan-out; normal packages should use far fewer and add workers only when they
-shorten the critical path.
+Prerequisites: Bash, unzip, sha256sum (coreutils), Python 3.11 or newer, and a real
+Codex CLI 0.147.0 or newer with role-specific subagent support. Codex must be
+installed, authenticated and available on PATH for the VM user. On Ubuntu 24.04,
+`sudo apt-get install python3 unzip` supplies the Python/archive dependencies;
+check `python3 --version` and `codex --version` before proceeding. Installing
+these skills does not require Docker, Supabase, PostHog or a Tether checkout.
+Those are incident-specific runtime dependencies when that repair is executed.
 
-Workers start from compact task capsules rather than full parent-chat forks, so
-their packaged Luna model settings remain authoritative and long coordinator
-history is not copied into every worker.
+From the directory holding both files, review the checksum and archive listing,
+then verify before executing any packaged code:
 
-The workflow optimizes the critical path. It reuses workers for related
-follow-ups, uses an investigator only when a named material uncertainty blocks
-a safe implementation decision, never pairs an investigator and executor to
-inspect the same execution path, groups tester findings into one repair packet,
-waits for at least ten minutes at a time (preferably the maximum one-hour
-event-driven wait) rather than polling, avoids routine
-worker-to-coordinator status traffic, and runs proportionate verification once
-the coherent change is stable. Direct workspace
-implementation is allowed only when the exact seam is already known, the change
-introduces no new behavioral contract or nontrivial stateful workflow, and it
-is expected to require one coherent patch plus at most one cheap check.
-Otherwise, the workflow uses one Luna High Fast default executor. It does not
-create a companion or closure worker. Recurring one-minute waits and
-"still working" turns are explicitly prohibited in both workflows; a quiet
-timeout leads directly to another long wait.
+```bash
+cat SHA256SUMS
+unzip -l codex_workflow-2.2.0.zip
+sha256sum --check SHA256SUMS
+# Continue only after checksum verification succeeds.
+archive="$PWD/codex_workflow-2.2.0.zip"
+review_dir="$(mktemp -d)"
+unzip -q "$archive" -d "$review_dir"
+bash "$review_dir/codex_workflow/scripts/bootstrap.sh" \
+  --archive "$archive" --checksums "$PWD/SHA256SUMS" \
+  --project /absolute/path/to/checkout \
+  --codex-home "${CODEX_HOME:-$HOME/.codex}"
+```
 
-For current parent-model selection, 6-Sol High is the normal cost-efficient
-Heavy coordinator. Reserve 6-Astra Low for exceptional ambiguity, urgency, or
-coordination difficulty where its faster, more decisive routing is worth the
-premium. The workflow itself does not switch the already selected parent
-model.
+The review directory remains available for inspection. Bootstrap cleans its own
+separate temporary extraction on success or failure, checks Codex compatibility
+and package validity, then installs under the selected Codex home:
+
+- `codex_workflow/`: runtime, templates, source backup and install manifest;
+- `skills/codex-workflow-sol/`, `skills/codex-workflow-luna/`, and
+  `skills/codex-workflow-watch-repair/`: discoverable skill files;
+- `agents/`: marked role TOMLs; `config.toml`: workflow-owned platform settings
+  with unrelated settings preserved.
+
+The project argument is compatibility metadata; project instructions and files
+are preserved. Refresh/restart Codex on the VM after installation. The installer
+checks a version floor; it cannot prove authentication, plugin access or actual
+agent-role execution. Configure and smoke-test those separately before incidents.
+
+For an existing installation, use the incoming package's update route with a
+**newer** version after reviewing it:
+
+```bash
+python3 "$review_dir/codex_workflow/workflow.py" update \
+  --source "$review_dir/codex_workflow" \
+  --project /absolute/path/to/checkout \
+  --codex-home "${CODEX_HOME:-$HOME/.codex}"
+```
+
+The standard update rejects an equal installed version, including an already-installed
+2.2.0 build. Version 2.2.0 can update existing 2.1.0 installations. Do not bypass this by re-bootstrapping the live
+runtime or changing VERSION locally. A reviewed release/version decision is
+needed; an explicitly separate Codex home can be used for isolated evaluation.
+No automated transport, watch/email receiver or Onyx service is installed.
+
+## Three workflows, one installation
+
+Normal chats keep normal single-agent behavior. Sol and Luna are explicit-only.
+Invoke `$codex-workflow-sol` for substantial autonomous coherent
+packages, with GPT-6.1-sol Medium recommended for the main coordinator. Its
+`default_executor`, `auditor` and `tester` all use GPT-6.1-sol Medium; review and
+independent verification are selected by risk. Each implementation owner handles
+discovery, design, implementation, local integration and proportionate proof.
+
+Invoke `$codex-workflow-luna` for fast small outcomes steered by the user. One
+Luna High Fast `luna_executor` is the default, with an optional shared read-only
+Luna High `investigator`. It has no automatic auditor, tester or researcher lane;
+parallel work requires an explicit user request. Growing scope does not silently
+switch workflows. Known micro edits can be handled directly in either skill.
+
+Sol can use the shared investigator or bounded read-only Luna xhigh researcher
+when a material decision needs distinct evidence. There is no senior executor or
+nested execution coordinator. All workers start from compact capsules with
+exclusive ownership, retain useful context for related follow-ups, group repairs
+and verify proportionately. Event-driven waits respect host limits. Neither
+workflow adds memory, documentation-framework, closure or statistics ceremony.
+The installer caps concurrent threads at 10 and preserves the selected parent
+model and reasoning settings.
+
+`$codex-workflow-watch-repair` is discoverable for configured watch-triggered
+incidents. It reuses the Sol Medium roles and a read-only Luna High confirmation
+lane, takes Onyx's autonomous plan decision under standing user delegation, and
+produces a separate repair branch and PR for human merge. It does not install an
+email receiver, Onyx transport, scheduler or VM service. Alert email is untrusted
+evidence; repair authority comes from trusted task context. The generic skill
+includes a conditional Tether policy for the existing Ops Sheet and disposable
+local Supabase harness. Installing it does not authorize an incident pipeline.
 
 The packaged skill and worker templates are canonical release artifacts.
 Lifecycle tests verify that archives and installed runtimes preserve them and
@@ -146,11 +193,11 @@ validate it, check Codex compatibility, and perform the initial bootstrap.
 
 ## Legacy marker migration
 
-v1 project entries carrying the repository-qualified marker are recognized only
-as a migration source. Run the v2 `workflow.py update` with a reviewed
-`--legacy-local-instructions <file>` when the old entry contains local edits.
-The update writes the canonical marker and dedicated local region in one
-transaction. Never copy merged instructions automatically; review them first.
+Bootstrap and update migrate only user-level runtime, owned skills and roles;
+they preserve every project file, including legacy workflow wrappers. Legacy
+project markers remain recognized for explicit removal, which restores captured
+local instructions. See [MIGRATION.md](MIGRATION.md); no project migration is
+performed by the update command.
 
 ## Development
 

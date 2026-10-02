@@ -18,12 +18,14 @@ sys.path.insert(0, str(PACKAGE_ROOT))
 
 from runtime.errors import ValidationError
 from runtime.layout import (
-    HEAVY_WORKFLOW_SKILL,
-    HEAVY_WORKFLOW_SKILL_OWNER,
+    LUNA_WORKFLOW_SKILL,
+    LUNA_WORKFLOW_SKILL_OWNER,
     LEGACY_SKILL_MARKERS,
-    WORKFLOW_SKILL,
-    WORKFLOW_SKILL_OWNER,
+    SOL_WORKFLOW_SKILL,
+    SOL_WORKFLOW_SKILL_OWNER,
     WORKFLOW_SKILLS,
+    WATCH_REPAIR_SKILL,
+    WATCH_REPAIR_SKILL_OWNER,
     PackageLayout,
     ProjectPaths,
     RuntimePaths,
@@ -33,7 +35,8 @@ from runtime.markers import PROJECT_PERSONALIZATION, remove_region
 from runtime.personalization import materialize_personalization
 from runtime.project_ops import plan_project_install, plan_project_update
 from runtime.release import RELEASES_URL, _checksum_for
-from runtime.runtime_ops import plan_platform_and_workers
+from runtime.runtime_ops import plan_platform_and_workers, plan_runtime_remove
+from runtime.plan import OperationPlan
 from runtime.transaction import apply as apply_mutations
 from scripts.package import build
 
@@ -44,202 +47,111 @@ class V2ContractTests(unittest.TestCase):
         cls.package = PackageLayout.resolve(PACKAGE_ROOT)
 
     def test_package_validation_requires_expected_workers_and_v2_metadata(self):
-        self.assertEqual(self.package.version, "2.0.10")
+        self.assertEqual(self.package.version, "2.2.0")
         self.assertEqual(
             self.package.worker_names,
             {
                 "auditor",
                 "default_executor",
-                "heavy_coordinator",
                 "investigator",
                 "researcher",
-                "senior_executor",
+                "luna_executor",
                 "tester",
             },
         )
         self.package.validate()
 
-    def test_workflow_skill_and_worker_guardrails_are_source_contracts(self):
-        skill = (PACKAGE_ROOT / "skills" / WORKFLOW_SKILL / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        coordination = (
-            PACKAGE_ROOT / "skills" / WORKFLOW_SKILL / "references" / "coordination.md"
-        ).read_text(encoding="utf-8")
-        metadata = (
-            PACKAGE_ROOT / "skills" / WORKFLOW_SKILL / "agents" / "openai.yaml"
-        ).read_text(encoding="utf-8")
-        heavy_skill = (
-            PACKAGE_ROOT / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md"
-        ).read_text(encoding="utf-8")
-        heavy_coordination = (
-            PACKAGE_ROOT
-            / "skills"
-            / HEAVY_WORKFLOW_SKILL
-            / "references"
-            / "heavy-coordination.md"
-        ).read_text(encoding="utf-8")
-        heavy_metadata = (
-            PACKAGE_ROOT
-            / "skills"
-            / HEAVY_WORKFLOW_SKILL
-            / "agents"
-            / "openai.yaml"
-        ).read_text(encoding="utf-8")
-        project = (PACKAGE_ROOT / "templates" / "AGENTS.md").read_text(
-            encoding="utf-8"
-        )
-        skill_compact = " ".join(skill.split())
-        coordination_compact = " ".join(coordination.split())
-        project_compact = " ".join(project.split())
-        for requirement in (
-            "There are no Light, Medium, or Heavy modes",
-            "Direct workspace implementation is allowed only when the exact seam is already known",
-            "the change introduces no new behavioral contract or nontrivial stateful workflow",
-            "one coherent patch plus at most one cheap, proportionate verification step",
-            "Otherwise, use one Luna High Fast `default_executor`",
-            "If a direct change reveals unexpected complexity, stop before implementing the larger solution",
-            "Reuse the current worker",
-            "Read-only diagnosis, discovery, and review run zero tests",
-            "Existing unit tests are regression gates, not diagnostic probes",
-            "Do not announce skipped checks or narrate a no-test decision",
-            "Name the unresolved claim",
-            "low-risk work does not get a tester",
-            "Use an `investigator` only when a named material uncertainty blocks a safe implementation decision",
-            "Never pair an investigator and executor to inspect the same execution path",
-            "Do not create an investigator to independently confirm an executor's diagnosis",
-            "The implementation owner verifies once",
-            "does not rerun it",
-            "Broad suites require a named cross-cutting critical risk",
-            "keep the coordinator lifecycle minimal",
-            "Do not wake a completed worker",
-            'fork_turns: "none"',
-            "End this workflow activation",
-            "at least three independent questions",
-            "at least eight substantive source retrievals",
-            "never qualifies automatically",
-            "`timeout_ms` of at least 600000",
-            "Never use recurring 60000 ms waits",
-            "Never wake or create a worker solely for Git hygiene or a commit",
-        ):
-            self.assertIn(requirement, skill_compact)
-        heavy_compact = " ".join(heavy_skill.split())
-        heavy_coordination_compact = " ".join(heavy_coordination.split())
-        for requirement in (
-            "spawn exactly one Luna 6 High Fast `default_executor`",
-            "spawn exactly one Luna 6 xhigh Fast `heavy_coordinator`",
-            "Do not add a coordinator wrapper merely because Heavy was invoked",
-            'with `fork_turns: "none"`',
-            "one batched status/diff inspection",
-            "`timeout_ms` of at least 600000",
-            "Never use recurring 60000 ms waits",
-            "Multi-turn waiting is a workflow failure",
-            "never wake a worker solely to format, stage, commit",
-            "one grouped repair wave",
-            "no automatic memory documents",
-        ):
-            self.assertIn(requirement, heavy_compact)
-        self.assertIn("prefer 3600000 ms", heavy_coordination_compact)
-        self.assertIn("A timeout is not evidence", heavy_coordination_compact)
-        self.assertIn("may not appear in `ALL_TOOLS`", heavy_coordination_compact)
-        self.assertIn("one planned terminal proof batch", heavy_coordination_compact)
-        self.assertIn("Do not run lint merely because TypeScript changed", heavy_coordination_compact)
-        self.assertIn("allow_implicit_invocation: false", heavy_metadata)
-        self.assertIn("Do not create Companion", coordination_compact)
-        self.assertIn("one prioritized, deduplicated defect packet", coordination_compact)
-        self.assertIn("Workers do not send routine progress updates", coordination_compact)
-        self.assertIn("obvious reversible micro follow-up directly", coordination_compact)
-        self.assertIn('fork_turns: "none"', coordination_compact)
-        self.assertIn("investigator's budget is a hard stop", coordination_compact)
-        self.assertIn("hard cap of 6 outer tool calls", coordination_compact)
-        self.assertIn("allow_implicit_invocation: false", metadata)
-        self.assertIn("# Project instructions", project_compact)
-        self.assertNotIn("$codex-workflow", project)
-        self.assertNotIn("Route Selection", project)
-        for obsolete in (
-            "heavy_route.md",
-            "medium_route.md",
-            "companion.md",
-            "investigation_team.md",
-            "closure_steward.md",
-            "user_AGENTS.md",
-            "enable_auto_check_update.md",
-            "disable_auto_check_update.md",
-            "resources/auto_check_update.md",
-            "install.md",
-            "personalization_guide.md",
-            "enable.md",
-            "disable.md",
-        ):
-            self.assertFalse((PACKAGE_ROOT / obsolete).exists(), obsolete)
+    def test_worker_models_reasoning_and_permissions_are_parsed_contracts(self):
+        from runtime._toml import tomllib
 
-        required_worker_contracts = {
-            "default_executor": (
-                'service_tier = "fast"',
-                "no more than 12 outer tool calls",
-                "Do not inspect history, broad documentation, or adjacent implementations",
-                "Do not create a one-defect-per-turn loop",
-                "Verify the coherent implementation once",
-                "Tests are regression protection, not a default task or a diagnostic tool",
-                "Do not send routine progress or status messages to the coordinator",
-            ),
-            "heavy_coordinator": (
-                'model_reasoning_effort = "xhigh"',
-                'service_tier = "fast"',
-                "You may spawn and coordinate subagents",
-                "`timeout_ms` of at least 600000",
-                "Never use recurring 60000 ms waits",
-                "without sending the parent a status-only message",
-                "one grouped repair packet",
-            ),
-            "investigator": (
-                'service_tier = "fast"',
-                "at most 6 outer tool calls",
-                "Continue only after the coordinator explicitly extends the budget",
-                "Stop as soon as the coordinator can make the named decision",
-                "Run zero tests, lint, formatting, typecheck, builds, or environment checks by default",
-                "Existing unit tests are regression gates, not diagnostic probes",
-                "Do not send routine progress or status messages to the coordinator",
-            ),
-            "senior_executor": (
-                'model_reasoning_effort = "xhigh"',
-                'service_tier = "fast"',
-                "at most 16 outer tool calls",
-                "Do not coordinate or spawn agents",
-                "Tests are regression protection, not a default task or diagnostic tool",
-                "Do not send routine progress or status messages to the coordinator",
-            ),
-            "researcher": (
-                'model_reasoning_effort = "xhigh"',
-                'service_tier = "fast"',
-                "at least three independent research questions",
-                "at least three distinct primary-source families",
-                "Do not modify the workspace, implement code, or spawn agents",
-                "Do not send routine progress or status messages to the coordinator",
-            ),
-            "tester": (
-                'service_tier = "fast"',
-                "at most 8 outer tool calls",
-                "risk-selected package",
-                "one prioritized packet",
-                "Do not send routine progress or status messages to the coordinator",
-            ),
-            "auditor": (
-                'service_tier = "fast"',
-                "at most 8 outer tool calls",
-                "Run zero tests, lint, formatting, builds, or environment checks by default",
-                "Existing unit tests are regression gates, not review or diagnostic probes",
-                "Do not send routine progress or status messages to the coordinator",
-            ),
+        expected = {
+            "default_executor": ("gpt-6.1-sol", "medium", "workspace-write"),
+            "auditor": ("gpt-6.1-sol", "medium", "read-only"),
+            "tester": ("gpt-6.1-sol", "medium", "workspace-write"),
+            "luna_executor": ("gpt-6-luna", "high", "workspace-write"),
+            "investigator": ("gpt-6-luna", "high", "read-only"),
+            "researcher": ("gpt-6-luna", "xhigh", "read-only"),
         }
-        for worker, requirements in required_worker_contracts.items():
-            text = (
-                PACKAGE_ROOT / "templates" / "agents" / f"{worker}.toml"
-            ).read_text(encoding="utf-8")
-            text_compact = " ".join(text.split())
-            self.assertIn('model = "gpt-6-luna"', text_compact, worker)
-            for requirement in requirements:
-                self.assertIn(requirement, text_compact, f"{worker}: {requirement}")
+        self.assertEqual(self.package.worker_names, set(expected))
+        for worker, contract in expected.items():
+            with self.subTest(worker=worker):
+                config = tomllib.loads(
+                    (self.package.agent_templates / f"{worker}.toml").read_text(encoding="utf-8")
+                )
+                self.assertEqual(config["name"], worker)
+                self.assertEqual(
+                    (config["model"], config["model_reasoning_effort"], config["sandbox_mode"]),
+                    contract,
+                )
+                self.assertEqual(config["service_tier"], "fast")
+                self.assertTrue(config["developer_instructions"].strip())
+
+    def test_three_skills_with_resolvable_references_and_invocation_policies(self):
+        self.assertEqual(WORKFLOW_SKILLS, {"codex-workflow-sol", "codex-workflow-luna", "codex-workflow-watch-repair"})
+        self.assertEqual({path.name for path in (PACKAGE_ROOT / "skills").iterdir()}, WORKFLOW_SKILLS)
+        for name in WORKFLOW_SKILLS:
+            folder = PACKAGE_ROOT / "skills" / name
+            text = (folder / "SKILL.md").read_text(encoding="utf-8")
+            frontmatter = text.split("---", 2)[1]
+            self.assertEqual(
+                next(line.split(":", 1)[1].strip() for line in frontmatter.splitlines() if line.startswith("name:")),
+                name,
+            )
+            # Dependency-free parser for this fixed scalar metadata contract.
+            metadata = (folder / "agents" / "openai.yaml").read_text(encoding="utf-8")
+            fields = dict(line.strip().split(":", 1) for line in metadata.splitlines() if ":" in line)
+            self.assertEqual(
+                fields["allow_implicit_invocation"].strip(),
+                "true" if name == WATCH_REPAIR_SKILL else "false",
+            )
+            self.assertIn("$" + name, fields["default_prompt"])
+            import re
+            for relative in re.findall(r"\]\((references/[^)]+)\)", text):
+                self.assertTrue((folder / relative).is_file(), relative)
+
+    def test_watch_repair_requires_its_referenced_policy_resources(self):
+        for resource in ("intake-and-authority.md", "repair-and-pr.md", "tether-policy.md"):
+            with self.subTest(resource=resource), tempfile.TemporaryDirectory() as directory:
+                incoming = Path(directory) / "incoming"
+                shutil.copytree(PACKAGE_ROOT, incoming, ignore=shutil.ignore_patterns(".git", "dist", "__pycache__"))
+                (incoming / "skills" / WATCH_REPAIR_SKILL / "references" / resource).unlink()
+                with self.assertRaisesRegex(ValidationError, "references are incomplete"):
+                    PackageLayout.resolve(incoming)
+
+    def test_watch_repair_migrates_two_skill_install_and_replaces_owned_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = RuntimePaths(root / "home")
+            project = ProjectPaths(root / "project")
+            plan_bootstrap(self.package, runtime, project).apply()
+            # Model an existing same-version two-skill runtime, including its manifest.
+            shutil.rmtree(runtime.skills / WATCH_REPAIR_SKILL)
+            shutil.rmtree(runtime.runtime / "skills" / WATCH_REPAIR_SKILL)
+            state_path = runtime.runtime / "install_state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["owned_skills"].remove(WATCH_REPAIR_SKILL)
+            state["owned_runtime_files"] = [
+                relative for relative in state["owned_runtime_files"]
+                if not relative.startswith("skills/" + WATCH_REPAIR_SKILL + "/")
+            ]
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            plan_update(self.package, runtime, project).apply()
+            target = runtime.skills / WATCH_REPAIR_SKILL
+            source = PACKAGE_ROOT / "skills" / WATCH_REPAIR_SKILL
+            self.assertIn(WATCH_REPAIR_SKILL_OWNER, (target / "SKILL.md").read_text(encoding="utf-8"))
+            for file in source.rglob("*"):
+                if file.is_file():
+                    self.assertEqual(file.read_bytes(), (target / file.relative_to(source)).read_bytes())
+            updated = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(set(updated["owned_skills"]), WORKFLOW_SKILLS)
+            self.assertFalse(project.active.exists())
+            self.assertFalse(project.workflow_dir.exists())
+            stale = target / "references" / "retired.md"
+            stale.write_text("retired", encoding="utf-8")
+            (target / "SKILL.md").write_text(WATCH_REPAIR_SKILL_OWNER + "\nold content\n", encoding="utf-8")
+            plan_update(self.package, runtime, project).apply()
+            self.assertEqual((target / "SKILL.md").read_bytes(), (source / "SKILL.md").read_bytes())
+            self.assertFalse(stale.exists())
 
     def test_release_acquisition_uses_public_repository(self):
         self.assertEqual(
@@ -366,7 +278,7 @@ Decision: No additional decisions.
                 self.assertTrue(all(name == "codex_workflow" or name.startswith("codex_workflow/") for name in bundle.namelist()))
                 bundle.extractall(Path(directory) / "extracted")
             extracted = PackageLayout.resolve(Path(directory) / "extracted" / "codex_workflow")
-            self.assertEqual(extracted.version, "2.0.10")
+            self.assertEqual(extracted.version, "2.2.0")
             for source in sorted(self.package.agent_templates.glob("*.toml")):
                 archived = (
                     Path(directory)
@@ -451,7 +363,7 @@ Decision: No additional decisions.
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(package_result.returncode, 0, package_result.stdout + package_result.stderr)
-            archive = package_output / "codex_workflow-2.0.10.zip"
+            archive = package_output / "codex_workflow-2.2.0.zip"
             self.assertTrue(archive.is_file())
             self.assertTrue((package_output / "SHA256SUMS").is_file())
             fake_bin = root / "bin"
@@ -504,25 +416,25 @@ Decision: No additional decisions.
             home = Path(directory) / "codex-home"
             project = ProjectPaths(Path(directory) / "project")
             plan_bootstrap(self.package, RuntimePaths(home), project).apply()
-            skill = home / "skills" / WORKFLOW_SKILL / "SKILL.md"
+            skill = home / "skills" / SOL_WORKFLOW_SKILL / "SKILL.md"
             self.assertTrue(skill.is_file())
-            self.assertIn(WORKFLOW_SKILL_OWNER, skill.read_text(encoding="utf-8"))
+            self.assertIn(SOL_WORKFLOW_SKILL_OWNER, skill.read_text(encoding="utf-8"))
             self.assertTrue(
-                (home / "skills" / WORKFLOW_SKILL / "references" / "coordination.md").is_file()
+                (home / "skills" / SOL_WORKFLOW_SKILL / "references" / "maintenance.md").is_file()
             )
-            heavy_skill = home / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md"
+            heavy_skill = home / "skills" / LUNA_WORKFLOW_SKILL / "SKILL.md"
             self.assertTrue(heavy_skill.is_file())
             self.assertIn(
-                HEAVY_WORKFLOW_SKILL_OWNER,
+                LUNA_WORKFLOW_SKILL_OWNER,
                 heavy_skill.read_text(encoding="utf-8"),
             )
             self.assertTrue(
                 (
                     home
                     / "skills"
-                    / HEAVY_WORKFLOW_SKILL
+                    / LUNA_WORKFLOW_SKILL
                     / "references"
-                    / "heavy-coordination.md"
+                    / "maintenance.md"
                 ).is_file()
             )
             state = json.loads((home / "codex_workflow" / "install_state.json").read_text(encoding="utf-8"))
@@ -554,37 +466,37 @@ Decision: No additional decisions.
             plan_bootstrap(self.package, runtime, project).apply()
             incoming_root = root / "incoming"
             shutil.copytree(PACKAGE_ROOT, incoming_root)
-            incoming_skill = incoming_root / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md"
+            incoming_skill = incoming_root / "skills" / LUNA_WORKFLOW_SKILL / "SKILL.md"
             incoming_skill.write_text(
                 incoming_skill.read_text(encoding="utf-8") + "\nUpdated test content.\n",
                 encoding="utf-8",
             )
-            stale = home / "skills" / HEAVY_WORKFLOW_SKILL / "references" / "obsolete.md"
+            stale = home / "skills" / LUNA_WORKFLOW_SKILL / "references" / "obsolete.md"
             stale.write_text("obsolete\n", encoding="utf-8")
             incoming = PackageLayout.resolve(incoming_root)
             plan_update(incoming, runtime, project).apply()
-            self.assertIn("Updated test content.", (home / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md").read_text(encoding="utf-8"))
+            self.assertIn("Updated test content.", (home / "skills" / LUNA_WORKFLOW_SKILL / "SKILL.md").read_text(encoding="utf-8"))
             self.assertFalse(stale.exists())
 
-    def test_update_adds_heavy_skill_to_previous_single_skill_install(self):
+    def test_update_repairs_missing_luna_skill(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             home = root / "codex-home"
             project = ProjectPaths(root / "project")
             runtime = RuntimePaths(home)
             plan_bootstrap(self.package, runtime, project).apply()
-            shutil.rmtree(home / "skills" / HEAVY_WORKFLOW_SKILL)
+            shutil.rmtree(home / "skills" / LUNA_WORKFLOW_SKILL)
             state_path = home / "codex_workflow" / "install_state.json"
             state = json.loads(state_path.read_text(encoding="utf-8"))
-            state["owned_skills"] = [WORKFLOW_SKILL]
+            state["owned_skills"] = [SOL_WORKFLOW_SKILL]
             state_path.write_text(json.dumps(state) + "\n", encoding="utf-8")
 
             plan_update(self.package, runtime, project).apply()
 
-            heavy_skill = home / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md"
+            heavy_skill = home / "skills" / LUNA_WORKFLOW_SKILL / "SKILL.md"
             self.assertTrue(heavy_skill.is_file())
             self.assertIn(
-                HEAVY_WORKFLOW_SKILL_OWNER,
+                LUNA_WORKFLOW_SKILL_OWNER,
                 heavy_skill.read_text(encoding="utf-8"),
             )
             updated_state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -614,8 +526,126 @@ Decision: No additional decisions.
             plan_update(self.package, runtime, project).apply()
             self.assertFalse(legacy.exists())
             self.assertFalse(obsolete_worker.exists())
-            self.assertTrue((home / "skills" / WORKFLOW_SKILL / "SKILL.md").is_file())
-            self.assertTrue((home / "skills" / HEAVY_WORKFLOW_SKILL / "SKILL.md").is_file())
+            self.assertTrue((home / "skills" / SOL_WORKFLOW_SKILL / "SKILL.md").is_file())
+            self.assertTrue((home / "skills" / LUNA_WORKFLOW_SKILL / "SKILL.md").is_file())
+
+    def _legacy_runtime(self, root, *, marked=True):
+        """Schema-1 layout deliberately lacking either new skill or worker set."""
+        runtime = RuntimePaths(root / "codex-home")
+        runtime.runtime.mkdir(parents=True)
+        shutil.copytree(PACKAGE_ROOT / "templates", runtime.runtime / "templates")
+        for name in ("default_executor", "luna_executor"):
+            (runtime.runtime / "templates" / "agents" / f"{name}.toml").unlink()
+        runtime.agents.mkdir()
+        for worker in ("default_executor", "heavy_coordinator", "senior_executor"):
+            content = f'name = "{worker}"\n'
+            if marked or worker == "default_executor":
+                content = f"# codex-workflow-worker: {worker}\n" + content
+            (runtime.agents / f"{worker}.toml").write_text(content, encoding="utf-8")
+            (runtime.runtime / "templates" / "agents" / f"{worker}.toml").write_text(content, encoding="utf-8")
+        owned_runtime = ["templates/agents/heavy_coordinator.toml", "templates/agents/senior_executor.toml"]
+        for name, marker in LEGACY_SKILL_MARKERS.items():
+            folder = runtime.skills / name
+            folder.mkdir(parents=True)
+            (folder / "SKILL.md").write_text((marker if marked else "user-owned") + "\n", encoding="utf-8")
+            stale = runtime.runtime / "skills" / name / "SKILL.md"
+            stale.parent.mkdir(parents=True)
+            stale.write_text(marker + "\n", encoding="utf-8")
+            owned_runtime.append(stale.relative_to(runtime.runtime).as_posix())
+        (runtime.runtime / "VERSION").write_text("2.0.10\n", encoding="utf-8")
+        (runtime.runtime / "install_state.json").write_text(json.dumps({
+            "schema_version": 1, "version": "2.0.10",
+            "owned_workers": ["default_executor", "heavy_coordinator", "senior_executor"],
+            "owned_skills": list(LEGACY_SKILL_MARKERS),
+            "owned_runtime_files": owned_runtime,
+        }), encoding="utf-8")
+        runtime.config_toml.write_text(
+            'model = "user-parent"\nmodel_reasoning_effort = "high"\n[unrelated]\nkeep = true\n',
+            encoding="utf-8",
+        )
+        (runtime.agents / "custom.toml").write_text('name = "custom"\n', encoding="utf-8")
+        runtime.user_agents.write_text("# Personal instructions\n", encoding="utf-8")
+        project = ProjectPaths(root / "project")
+        project.root.mkdir()
+        project.active.write_text("# Project instructions\n", encoding="utf-8")
+        project.docs.mkdir()
+        (project.docs / "existing.md").write_text("Keep memory untouched\n", encoding="utf-8")
+        return runtime, project
+
+    def test_schema_one_legacy_migration_preserves_unowned_content(self):
+        from runtime._toml import tomllib
+        for marked in (True, False):
+            with self.subTest(marked=marked), tempfile.TemporaryDirectory() as directory:
+                runtime, project = self._legacy_runtime(Path(directory), marked=marked)
+                preserved = {
+                    path: path.read_bytes() for path in (
+                        project.active, project.docs / "existing.md",
+                        runtime.user_agents, runtime.agents / "custom.toml",
+                    )
+                }
+                with self.assertRaises(ValidationError):
+                    PackageLayout.resolve(runtime.runtime)
+                PackageLayout.resolve(runtime.runtime, allow_legacy=True)
+                plan = plan_update(self.package, runtime, project)
+                plan.apply()
+                state = json.loads((runtime.runtime / "install_state.json").read_text(encoding="utf-8"))
+                self.assertEqual(state["schema_version"], 2)
+                self.assertEqual(state["version"], "2.2.0")
+                self.assertEqual(set(state["owned_skills"]), WORKFLOW_SKILLS)
+                self.assertEqual(set(state["owned_workers"]), self.package.worker_names)
+                for name in LEGACY_SKILL_MARKERS:
+                    self.assertEqual((runtime.skills / name).exists(), not marked)
+                    self.assertFalse((runtime.runtime / "skills" / name).exists())
+                    if not marked:
+                        self.assertEqual((runtime.skills / name / "SKILL.md").read_text(encoding="utf-8"), "user-owned\n")
+                for name in ("heavy_coordinator", "senior_executor"):
+                    self.assertEqual((runtime.agents / f"{name}.toml").exists(), not marked)
+                    self.assertFalse((runtime.runtime / "templates" / "agents" / f"{name}.toml").exists())
+                for path, original in preserved.items():
+                    self.assertEqual(path.read_bytes(), original)
+                config = tomllib.loads(runtime.config_toml.read_text(encoding="utf-8"))
+                self.assertEqual(config["model"], "user-parent")
+                self.assertEqual(config["model_reasoning_effort"], "high")
+                self.assertEqual(config["unrelated"], {"keep": True})
+                self.assertTrue(Path(plan.details["backup"]).is_dir())
+                self.assertFalse(project.workflow_dir.exists())
+
+    def test_update_new_target_collision_leaves_legacy_install_untouched(self):
+        for name in WORKFLOW_SKILLS:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                runtime, project = self._legacy_runtime(Path(directory))
+                target = runtime.skills / name
+                target.mkdir()
+                (target / "SKILL.md").write_text("user-owned\n", encoding="utf-8")
+                before = {path: path.read_bytes() for path in runtime.codex_home.rglob("*") if path.is_file()}
+                with self.assertRaises(ValidationError):
+                    plan_update(self.package, runtime, project)
+                after = {path: path.read_bytes() for path in runtime.codex_home.rglob("*") if path.is_file()}
+                self.assertEqual(after, before)
+
+    def test_bootstrap_retires_marked_legacy_without_creating_project_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime, project = self._legacy_runtime(Path(directory))
+            plan_bootstrap(self.package, runtime, project).apply()
+            self.assertEqual({path.name for path in runtime.skills.iterdir()}, WORKFLOW_SKILLS)
+            for worker in ("heavy_coordinator", "senior_executor"):
+                self.assertFalse((runtime.agents / f"{worker}.toml").exists())
+            self.assertEqual(project.active.read_text(encoding="utf-8"), "# Project instructions\n")
+            self.assertFalse(project.workflow_dir.exists())
+
+    def test_remove_recognizes_legacy_markers_and_preserves_unmarked_names(self):
+        for marked in (True, False):
+            with self.subTest(marked=marked), tempfile.TemporaryDirectory() as directory:
+                runtime, project = self._legacy_runtime(Path(directory), marked=marked)
+                mutations, dirs, warnings = plan_runtime_remove(runtime)
+                OperationPlan("remove", mutations, warnings, [], cleanup_dirs=dirs).apply()
+                for name in LEGACY_SKILL_MARKERS:
+                    self.assertEqual((runtime.skills / name).exists(), not marked)
+                for worker in ("heavy_coordinator", "senior_executor"):
+                    self.assertEqual((runtime.agents / f"{worker}.toml").exists(), not marked)
+                self.assertTrue((runtime.agents / "custom.toml").is_file())
+                self.assertEqual(project.active.read_text(encoding="utf-8"), "# Project instructions\n")
+                self.assertTrue((project.docs / "existing.md").is_file())
 
     def test_remove_deletes_owned_skill_but_preserves_unowned_skill(self):
         with tempfile.TemporaryDirectory() as directory:

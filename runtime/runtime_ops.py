@@ -11,6 +11,7 @@ from .platform_settings import (
 from .errors import ValidationError
 from .layout import (
     OWNED_SKILL_MARKERS,
+    OBSOLETE_WORKERS,
     USER_STATE,
     WORKFLOW_SKILL_OWNERS,
     WORKFLOW_SKILLS,
@@ -232,11 +233,14 @@ def plan_platform_and_workers(
                 source.read_text(encoding="utf-8"),
             )
         )
-    for worker in sorted(previous_owned - workers):
+    for worker in sorted((previous_owned | set(OBSOLETE_WORKERS)) - workers):
         target = runtime.agents / f"{worker}.toml"
         if target.exists():
-            validate_worker_owner(target, worker)
-            mutations.append(Mutation(target, None))
+            if target.is_symlink() or not target.is_file():
+                continue
+            match = WORKER_MARKER.search(target.read_text(encoding="utf-8"))
+            if match is not None and match.group(1) == worker:
+                mutations.append(Mutation(target, None))
     config_text = (
         runtime.config_toml.read_text(encoding="utf-8")
         if runtime.config_toml.is_file()

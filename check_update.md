@@ -13,4 +13,4 @@ each version's GitHub release notes. It does not download, install, or change
 any workflow files.
 
 If an update is available, review the reported summaries and then invoke
-`$codex-workflow update` when you are ready to install the latest release.
+`$codex-workflow-sol update` when you are ready to install the latest release.
